@@ -60,7 +60,7 @@ const Index = () => {
         colors={['#0F172A', '#1E293B', '#334155']}
         className="absolute inset-0"
       />
-      
+
       <ScrollView
         className="flex-1 px-6"
         showsVerticalScrollIndicator={false}
@@ -111,7 +111,7 @@ const Index = () => {
             accessibilityRole="header"
           >
             Features
-          </Text>
+                </Text>
           
           {features.map((feature, index) => (
             <FeatureCard key={index} {...feature} />
@@ -132,7 +132,7 @@ const Index = () => {
                 <Text className="text-slate-300">Add your text, upload a PDF, or paste content you want to hear.</Text>
               </View>
             </View>
-            
+
             <View className="flex-row items-start">
               <View className="w-8 h-8 bg-blue-500 rounded-full items-center justify-center mr-4 mt-1">
                 <Text className="text-white font-bold">2</Text>

@@ -74,20 +74,20 @@ Accessibility-focused settings including:
 
 1. **Clone the repository**
 
-   ```bash
+```bash
    git clone https://github.com/yourusername/dhvani-text-to-speech.git
    cd dhvani-text-to-speech
    ```
 
 2. **Install dependencies**
 
-   ```bash
-   npm install
+```bash
+npm install
    ```
 
 3. **Start the development server**
 
-   ```bash
+```bash
    npm start
    ```
 

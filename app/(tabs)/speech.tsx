@@ -1,49 +1,119 @@
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Image,
   Alert,
+  ActivityIndicator,
 } from "react-native";
-import { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 
-import { icons } from "@/constants/icons";
+import { useAppStore } from "@/store/useAppStore";
+import { PDFService } from "@/services/pdfService";
 
 const Speech = () => {
   const [inputText, setInputText] = useState("");
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [speechSpeed, setSpeechSpeed] = useState(1.0);
-  const [selectedVoice, setSelectedVoice] = useState("female");
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const {
+    currentPDF,
+    isLoading,
+    error,
+    addPDFFile,
+    updatePDFText,
+    setLoading,
+    setError,
+  } = useAppStore();
 
-  const handleTextToSpeech = () => {
+  // Update input text when current PDF changes
+  useEffect(() => {
+    if (currentPDF) {
+      console.log('📄 [Speech] Loading text from current PDF:', currentPDF.name);
+      setInputText(currentPDF.extractedText);
+    } else {
+      setInputText("");
+    }
+  }, [currentPDF]);
+
+  const handleFileUpload = async () => {
+    console.log('🚀 [Speech] Starting PDF upload...');
+    
+    try {
+      setIsUploading(true);
+      setError(null);
+      
+      const pickedFile = await PDFService.pickPDF();
+      
+      if (!pickedFile) {
+        console.log('👤 [Speech] User cancelled file selection');
+        return;
+      }
+
+      console.log('✅ [Speech] File picked:', pickedFile.name);
+      setLoading(true);
+      
+      const isValid = await PDFService.validatePDFFile(pickedFile.uri);
+      if (!isValid) {
+        throw new Error('Invalid PDF file');
+      }
+      
+      const extractedText = await PDFService.extractTextFromPDF(pickedFile.uri);
+      console.log('📝 [Speech] Text extracted, length:', extractedText.length);
+      
+      const pdfFile = {
+        id: PDFService.generateId(),
+        name: pickedFile.name,
+        uri: pickedFile.uri,
+        size: pickedFile.size,
+        extractedText,
+        createdAt: new Date(),
+      };
+
+      addPDFFile(pdfFile);
+      console.log('💾 [Speech] PDF saved to store');
+      
+      Alert.alert("Success", `"${pickedFile.name}" uploaded successfully!`);
+
+    } catch (error) {
+      console.error('💥 [Speech] Upload error:', error);
+      setError(error instanceof Error ? error.message : 'Upload failed');
+      Alert.alert("Error", "Failed to upload PDF. Please try again.");
+    } finally {
+      setIsUploading(false);
+      setLoading(false);
+    }
+  };
+
+  const handleSaveText = () => {
     if (!inputText.trim()) {
-      Alert.alert("Please enter some text", "You need to add text before converting to speech.");
+      Alert.alert("No text to save", "Please add some text before saving.");
       return;
     }
-    
-    setIsPlaying(!isPlaying);
-    // Here you would implement actual text-to-speech functionality
-    console.log("Converting text to speech:", inputText);
+
+    if (currentPDF) {
+      updatePDFText(currentPDF.id, inputText);
+      Alert.alert("Saved", "Your changes have been saved.");
+    } else {
+      Alert.alert("No PDF Selected", "Please upload a PDF first.");
+    }
   };
 
-  const handleFileUpload = () => {
-    Alert.alert("File Upload", "Choose your file type", [
-      { text: "PDF Document", onPress: () => console.log("PDF selected") },
-      { text: "Text Document", onPress: () => console.log("Text doc selected") },
-      { text: "Image with Text", onPress: () => console.log("Image selected") },
-      { text: "Cancel", style: "cancel" }
-    ]);
+  const handleClearText = () => {
+    Alert.alert(
+      "Clear Text",
+      "Are you sure you want to clear all text?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Clear", 
+          style: "destructive",
+          onPress: () => setInputText("")
+        }
+      ]
+    );
   };
-
-  const speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
-  const voiceOptions = [
-    { id: "female", name: "Female Voice", description: "Clear and warm" },
-    { id: "male", name: "Male Voice", description: "Deep and confident" },
-    { id: "neutral", name: "Neutral Voice", description: "Balanced tone" },
-  ];
 
   return (
     <View className="flex-1 bg-slate-900">
@@ -59,156 +129,100 @@ const Speech = () => {
       >
         {/* Header */}
         <View className="mt-16 mb-8">
-          <Text 
-            className="text-white text-3xl font-bold text-center mb-2"
-            accessibilityRole="header"
-          >
-            Text to Speech
+          <Text className="mb-2 text-3xl font-bold text-center text-white">
+            PDF to Text
           </Text>
-          <Text className="text-slate-300 text-center text-base">
-            Convert your text, documents, or files into natural speech
+          <Text className="text-base text-center text-slate-300">
+            Upload PDF files and extract text for processing
           </Text>
         </View>
 
-        {/* File Upload Section */}
-        <View className="mb-6">
-          <Text className="text-white text-xl font-bold mb-4">Upload File</Text>
-          <TouchableOpacity
-            onPress={handleFileUpload}
-            className="bg-slate-800/50 border-2 border-dashed border-slate-600 rounded-2xl p-8 items-center"
-            accessibilityRole="button"
-            accessibilityLabel="Upload file for text to speech conversion"
-          >
-            <View className="w-16 h-16 bg-blue-500/20 rounded-2xl items-center justify-center mb-4">
-              <Image source={icons.save} className="w-8 h-8" tintColor="#3B82F6" />
-            </View>
-            <Text className="text-white text-lg font-semibold mb-2">Upload Document</Text>
-            <Text className="text-slate-400 text-center">
-              PDF, Word, Text files, or images with text
+        {/* Current PDF Info */}
+        {currentPDF && (
+          <View className="p-4 mb-6 rounded-xl border bg-blue-500/20 border-blue-500/30">
+            <Text className="mb-1 text-sm font-semibold text-blue-400">Current PDF</Text>
+            <Text className="mb-1 text-lg font-bold text-white">{currentPDF.name}</Text>
+            <Text className="text-sm text-slate-300">
+              {PDFService.formatFileSize(currentPDF.size)} • {currentPDF.createdAt.toLocaleDateString()}
             </Text>
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
+
+        {/* Upload Section */}
+        <TouchableOpacity
+          onPress={handleFileUpload}
+          disabled={isUploading || isLoading}
+          className={`bg-slate-800/50 border-2 border-dashed border-slate-600 rounded-xl p-8 items-center mb-6 ${
+            isUploading || isLoading ? 'opacity-50' : ''
+          }`}
+        >
+          {isUploading ? (
+            <ActivityIndicator size="large" color="#3B82F6" />
+          ) : (
+            <>
+              <Text className="mb-2 text-2xl">📄</Text>
+              <Text className="mb-1 text-lg font-semibold text-white">
+                {isUploading ? 'Uploading...' : 'Upload PDF'}
+              </Text>
+              <Text className="text-center text-slate-400">
+                Tap to select a PDF file
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
 
         {/* Text Input Section */}
         <View className="mb-6">
-          <Text className="text-white text-xl font-bold mb-4">Or Type Your Text</Text>
-          <View className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-4">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-xl font-bold text-white">Extracted Text</Text>
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={handleClearText}
+                className="px-3 py-1 rounded-lg bg-red-500/20"
+              >
+                <Text className="text-sm font-semibold text-red-400">Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveText}
+                className="px-3 py-1 rounded-lg bg-green-500/20"
+              >
+                <Text className="text-sm font-semibold text-green-400">Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <View className="p-4 rounded-xl border bg-slate-800/50 border-slate-700/50">
             <TextInput
               value={inputText}
               onChangeText={setInputText}
-              placeholder="Enter the text you want to convert to speech..."
+              placeholder="Upload a PDF file to extract text, or type your own text here..."
               placeholderTextColor="#94A3B8"
               multiline
-              numberOfLines={8}
-              className="text-white text-base leading-6 min-h-[120px]"
+              numberOfLines={12}
+              className="text-white text-base leading-6 min-h-[200px]"
               textAlignVertical="top"
-              accessibilityLabel="Text input for speech conversion"
             />
           </View>
-          <Text className="text-slate-400 text-sm mt-2">
+          <Text className="mt-2 text-sm text-slate-400">
             {inputText.length} characters
           </Text>
         </View>
 
-        {/* Voice Settings */}
-        <View className="mb-6">
-          <Text className="text-white text-xl font-bold mb-4">Voice Settings</Text>
-          
-          {/* Voice Selection */}
-          <View className="mb-4">
-            <Text className="text-slate-300 text-base font-semibold mb-3">Select Voice</Text>
-            {voiceOptions.map((voice) => (
-              <TouchableOpacity
-                key={voice.id}
-                onPress={() => setSelectedVoice(voice.id)}
-                className={`flex-row items-center p-4 rounded-xl mb-2 ${
-                  selectedVoice === voice.id 
-                    ? 'bg-blue-500/20 border border-blue-500/50' 
-                    : 'bg-slate-800/30 border border-slate-700/50'
-                }`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: selectedVoice === voice.id }}
-              >
-                <View className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  selectedVoice === voice.id ? 'bg-blue-500 border-blue-500' : 'border-slate-500'
-                }`} />
-                <View className="flex-1">
-                  <Text className="text-white font-semibold">{voice.name}</Text>
-                  <Text className="text-slate-400 text-sm">{voice.description}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+        {/* Error Display */}
+        {error && (
+          <View className="p-4 mb-6 rounded-xl border bg-red-500/20 border-red-500/30">
+            <Text className="font-semibold text-red-400">Error</Text>
+            <Text className="text-sm text-red-300">{error}</Text>
           </View>
+        )}
 
-          {/* Speed Control */}
-          <View>
-            <Text className="text-slate-300 text-base font-semibold mb-3">
-              Speech Speed: {speechSpeed}x
-            </Text>
-            <View className="flex-row flex-wrap gap-2">
-              {speedOptions.map((speed) => (
-                <TouchableOpacity
-                  key={speed}
-                  onPress={() => setSpeechSpeed(speed)}
-                  className={`px-4 py-2 rounded-xl ${
-                    speechSpeed === speed
-                      ? 'bg-blue-500'
-                      : 'bg-slate-700/50'
-                  }`}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Set speech speed to ${speed}x`}
-                >
-                  <Text className={`font-semibold ${
-                    speechSpeed === speed ? 'text-white' : 'text-slate-300'
-                  }`}>
-                    {speed}x
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Control Buttons */}
-        <View className="flex-row gap-4 mb-8">
-          <TouchableOpacity
-            onPress={handleTextToSpeech}
-            className="flex-1 bg-blue-500 rounded-2xl p-4 flex-row items-center justify-center"
-            accessibilityRole="button"
-            accessibilityLabel={isPlaying ? "Stop speech" : "Start text to speech"}
-          >
-            <Image 
-              source={icons.play} 
-              className="w-6 h-6 mr-2" 
-              tintColor="#FFFFFF" 
-            />
-            <Text className="text-white text-lg font-bold">
-              {isPlaying ? 'Stop' : 'Play'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="bg-slate-700 rounded-2xl p-4 flex-row items-center justify-center min-w-[80px]"
-            accessibilityRole="button"
-            accessibilityLabel="Save audio to history"
-          >
-            <Image 
-              source={icons.save} 
-              className="w-6 h-6" 
-              tintColor="#FFFFFF" 
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Recent Activity */}
-        <View className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
-          <Text className="text-white text-xl font-bold mb-4">Quick Tips</Text>
-          <View className="space-y-3">
-            <Text className="text-slate-300">• Use punctuation for natural pauses</Text>
-            <Text className="text-slate-300">• Try different voices to find your preference</Text>
-            <Text className="text-slate-300">• Adjust speed for comfortable listening</Text>
-            <Text className="text-slate-300">• Save frequently used texts to history</Text>
-          </View>
+        {/* Info */}
+        <View className="p-4 rounded-xl border bg-slate-800/30 border-slate-700/50">
+          <Text className="mb-2 text-lg font-bold text-white">How it works:</Text>
+          <Text className="mb-2 text-slate-300">1. Upload a PDF file</Text>
+          <Text className="mb-2 text-slate-300">2. Text is automatically extracted</Text>
+          <Text className="mb-2 text-slate-300">3. Edit the text if needed</Text>
+          <Text className="text-slate-300">4. Save to your device storage</Text>
         </View>
       </ScrollView>
     </View>
