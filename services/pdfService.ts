@@ -1,4 +1,8 @@
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+
+// Import pdfjs-dist
+const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
 
 export interface PickedFile {
   name: string;
@@ -43,36 +47,105 @@ export class PDFService {
   }
 
   static async extractTextFromPDF(uri: string): Promise<string> {
-    console.log('📝 [PDFService] Extracting text from PDF:', uri);
+    console.log('📝 [PDFService] Starting PDF text extraction from:', uri);
     
-    // TODO: Implement actual PDF text extraction
-    // For now, return placeholder text
-    const placeholderText = `This is placeholder text extracted from the PDF file.
+    try {
+      // Check if file exists
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        throw new Error('PDF file not found');
+      }
 
-You can replace this service method with actual PDF text extraction using libraries like:
-- react-native-pdf-lib
-- react-native-pdf-to-text
-- or server-side extraction
+      console.log('🔍 [PDFService] File exists, size:', fileInfo.size);
+      
+      // Read PDF as base64
+      console.log('📖 [PDFService] Reading PDF as base64...');
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      console.log('📊 [PDFService] Base64 length:', base64.length);
+      
+      // Convert base64 to binary array
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      console.log('🔄 [PDFService] Converted to binary, size:', bytes.length);
+      
+      // Load PDF document
+      console.log('⚙️ [PDFService] Loading PDF document...');
+      const loadingTask = pdfjsLib.getDocument({ data: bytes });
+      const pdf = await loadingTask.promise;
+      
+      console.log('📄 [PDFService] PDF loaded successfully, pages:', pdf.numPages);
+      
+      // Extract text from all pages
+      let fullText = '';
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        console.log(`📄 [PDFService] Processing page ${pageNum}/${pdf.numPages}...`);
+        
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        if (pageText.trim()) {
+          fullText += pageText + '\n\n';
+          console.log(`✅ [PDFService] Page ${pageNum} extracted ${pageText.length} characters`);
+        } else {
+          console.log(`⚠️ [PDFService] Page ${pageNum} contains no text`);
+        }
+      }
+      
+      console.log('🎯 [PDFService] Total text extracted:', fullText.length, 'characters');
+      console.log('📄 [PDFService] Extracted text preview:');
+      console.log('---START EXTRACTED TEXT---');
+      console.log(fullText.substring(0, 500));
+      console.log('---END EXTRACTED TEXT---');
+      
+      if (fullText.trim().length > 0) {
+        return fullText.trim();
+      } else {
+        return 'No text could be extracted from this PDF. The PDF might contain only images or be password protected.';
+      }
 
-The PDF file is located at: ${uri}
-
-This text would normally contain the actual content from your PDF document.`;
-
-    console.log('✅ [PDFService] Text extraction completed. Length:', placeholderText.length);
-    return placeholderText;
+    } catch (error) {
+      console.error('💥 [PDFService] Text extraction failed:', error);
+      return `Failed to extract text from PDF: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
   }
 
   static async validatePDFFile(uri: string): Promise<boolean> {
     console.log('🔍 [PDFService] Validating PDF file:', uri);
     
-    // Basic validation - check if URI exists
-    if (!uri || uri.trim() === '') {
-      console.log('❌ [PDFService] Invalid URI');
+    try {
+      if (!uri || uri.trim() === '') {
+        console.log('❌ [PDFService] Invalid URI');
+        return false;
+      }
+
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        console.log('❌ [PDFService] File does not exist');
+        return false;
+      }
+
+      if (fileInfo.size === 0) {
+        console.log('❌ [PDFService] File is empty');
+        return false;
+      }
+
+      console.log('✅ [PDFService] PDF file validation passed');
+      return true;
+    } catch (error) {
+      console.error('❌ [PDFService] Validation error:', error);
       return false;
     }
-
-    console.log('✅ [PDFService] PDF file validation passed');
-    return true;
   }
 
   static generateId(): string {

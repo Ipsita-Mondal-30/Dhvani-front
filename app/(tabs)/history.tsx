@@ -90,7 +90,11 @@ const History = () => {
                     {pdf.name}
                   </Text>
                   <Text className="text-sm text-slate-400">
-                    {PDFService.formatFileSize(pdf.size)} • {pdf.createdAt.toLocaleDateString()}
+                    {PDFService.formatFileSize(pdf.size)} • {
+                      pdf.createdAt && pdf.createdAt instanceof Date 
+                        ? pdf.createdAt.toLocaleDateString()
+                        : 'Recently added'
+                    }
                   </Text>
                   <Text className="text-sm text-slate-400">
                     {pdf.extractedText.length} characters extracted
