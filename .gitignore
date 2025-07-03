@@ -1,0 +1,50 @@
+# node modules
+node_modules/
+
+# npm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# directories
+.expo/
+.expo-shared/
+dist/
+build/
+web-build/
+
+# macOS
+.DS_Store
+
+# environment files
+.env
+.env.*.local
+
+# metro + watchman
+.cache/
+.watchmanconfig
+
+# android/ios specific
+*.apk
+*.keystore
+android/app/debug.keystore
+
+# Expo generated
+*.tar.gz
+*.xcworkspace
+*.xcodeproj
+.idea/
+*.iml
+
+# logs
+*.log
+
+# bundler
+*.bundle
+
+# test coverage
+coverage/
+
+# miscellaneous
+*.tgz
+expo-debug.log

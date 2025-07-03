@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Dhvani - Text to Speech",
+    "slug": "dhvani-text-to-speech",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icons/logo.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/icons/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dhvani.texttospeech"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/logo.png",
+        "backgroundColor": "#0F172A"
+      },
+      "package": "com.dhvani.texttospeech"
+    },
+    "web": {
+      "favicon": "./assets/icons/logo.png",
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
