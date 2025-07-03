@@ -25,6 +25,8 @@ export class TTSService {
   private static currentAudioUri: string | null = null;
   private static currentPosition = 0;
   private static duration = 0;
+  private static mockPlaybackTimer: NodeJS.Timeout | null = null;
+  private static mockStartTime = 0;
 
   // Initialize the service
   static async initialize(): Promise<void> {
@@ -35,10 +37,8 @@ export class TTSService {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         staysActiveInBackground: true,
-        interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
-        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
         playThroughEarpieceAndroid: false,
       });
       
@@ -86,7 +86,7 @@ export class TTSService {
         console.error('❌ [TTS] API Error:', response.status, errorText);
         
         // If TTS API is not available, create a mock audio file
-        if (response.status === 404 || response.status === 405) {
+        if (response.status === 404 || response.status === 405 || response.status === 503) {
           console.log('⚠️ [TTS] TTS API not available, creating mock audio...');
           const mockAudioUri = await this.createMockAudio(processedText);
           this.currentAudioUri = mockAudioUri;
@@ -121,6 +121,20 @@ export class TTSService {
     }
   }
 
+  // Convert ArrayBuffer to base64 string
+  private static arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const uint8Array = new Uint8Array(buffer);
+    const chunkSize = 0x8000; // Process in smaller chunks to avoid memory issues
+    let binary = '';
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, Math.min(i + chunkSize, uint8Array.length));
+      binary += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    
+    return btoa(binary);
+  }
+
   // Save audio data to file
   private static async saveAudioToFile(audioData: ArrayBuffer): Promise<string> {
     try {
@@ -128,16 +142,29 @@ export class TTSService {
       const fileUri = `${FileSystem.documentDirectory}${fileName}`;
       
       console.log('💾 [TTS] Saving audio to file:', fileUri);
+      console.log('📊 [TTS] Audio data size:', audioData.byteLength, 'bytes');
       
-      // Convert ArrayBuffer to base64
-      const uint8Array = new Uint8Array(audioData);
-      const base64 = btoa(String.fromCharCode(...uint8Array));
+      // Create a temporary file URI for writing binary data
+      const tempUri = `${FileSystem.cacheDirectory}temp_${fileName}`;
       
-      await FileSystem.writeAsStringAsync(fileUri, base64, {
+      // Write the binary data directly to a temporary file
+      await FileSystem.writeAsStringAsync(tempUri, TTSService.arrayBufferToBase64(audioData), {
         encoding: FileSystem.EncodingType.Base64,
       });
       
+      // Move the temporary file to its final location
+      await FileSystem.moveAsync({
+        from: tempUri,
+        to: fileUri,
+      });
+      
+      // Verify the file was created successfully
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
       console.log('✅ [TTS] Audio file saved successfully');
+      if (fileInfo.exists && 'size' in fileInfo) {
+        console.log('📁 [TTS] File size:', fileInfo.size, 'bytes');
+      }
+      
       return fileUri;
     } catch (error) {
       console.error('💥 [TTS] Failed to save audio file:', error);
@@ -148,36 +175,14 @@ export class TTSService {
   // Create a mock audio file for testing when TTS API is not available
   private static async createMockAudio(text: string): Promise<string> {
     try {
-      const fileName = `mock_tts_audio_${Date.now()}.mp3`;
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-      
-      console.log('🎭 [TTS] Creating mock audio file:', fileUri);
-      
-      // Create a minimal MP3 file with silence (about 2 seconds)
-      // This is a very basic MP3 header for a silent audio file
-      const mockMp3Data = new Uint8Array([
-        0xFF, 0xFB, 0x90, 0x00, // MP3 header
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      ]);
-      
-      const base64 = btoa(String.fromCharCode(...mockMp3Data));
-      
-      await FileSystem.writeAsStringAsync(fileUri, base64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      
-      console.log('✅ [TTS] Mock audio file created successfully');
+      console.log('🎭 [TTS] Creating mock audio notification...');
       console.log('📝 [TTS] Mock audio represents:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
       
-      return fileUri;
+      // Instead of creating a broken audio file, let's use a simple beep sound URI
+      // or return a special identifier that we handle in the play method
+      return 'mock://audio/beep';
     } catch (error) {
-      console.error('💥 [TTS] Failed to create mock audio file:', error);
+      console.error('💥 [TTS] Failed to create mock audio:', error);
       throw error;
     }
   }
@@ -193,10 +198,53 @@ export class TTSService {
 
       console.log('▶️ [TTS] Playing audio:', uri);
 
+      // Handle mock audio
+      if (uri.startsWith('mock://')) {
+        console.log('🎭 [TTS] Playing mock audio - simulating playback');
+        this.isPlaying = true;
+        this.isPaused = false;
+        this.duration = 3000; // 3 seconds mock duration
+        this.mockStartTime = Date.now();
+        
+        // Clear any existing timer
+        if (this.mockPlaybackTimer) {
+          clearInterval(this.mockPlaybackTimer);
+        }
+        
+        // Simulate playback progress
+        this.mockPlaybackTimer = setInterval(() => {
+          if (this.isPlaying && !this.isPaused) {
+            const elapsed = Date.now() - this.mockStartTime;
+            this.currentPosition = Math.min(elapsed, this.duration);
+            
+            if (this.currentPosition >= this.duration) {
+              console.log('🏁 [TTS] Mock audio playback finished');
+              this.isPlaying = false;
+              this.isPaused = false;
+              this.currentPosition = 0;
+              if (this.mockPlaybackTimer) {
+                clearInterval(this.mockPlaybackTimer);
+                this.mockPlaybackTimer = null;
+              }
+            }
+          }
+        }, 100);
+        
+        return;
+      }
+
       // Unload previous sound if exists
       if (this.sound) {
         await this.sound.unloadAsync();
       }
+
+      // Validate that the file exists and is readable
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        throw new Error('Audio file does not exist');
+      }
+
+      console.log('📁 [TTS] Audio file info:', fileInfo);
 
       // Load and play new sound
       const { sound } = await Audio.Sound.createAsync(
@@ -234,11 +282,18 @@ export class TTSService {
   // Pause audio playback
   static async pauseAudio(): Promise<void> {
     try {
-      if (this.sound && this.isPlaying) {
-        await this.sound.pauseAsync();
-        this.isPlaying = false;
-        this.isPaused = true;
-        console.log('⏸️ [TTS] Audio paused');
+      if (this.isPlaying) {
+        if (this.currentAudioUri?.startsWith('mock://')) {
+          // Handle mock audio pause
+          this.isPlaying = false;
+          this.isPaused = true;
+          console.log('⏸️ [TTS] Mock audio paused');
+        } else if (this.sound) {
+          await this.sound.pauseAsync();
+          this.isPlaying = false;
+          this.isPaused = true;
+          console.log('⏸️ [TTS] Audio paused');
+        }
       }
     } catch (error) {
       console.error('💥 [TTS] Failed to pause audio:', error);
@@ -249,11 +304,19 @@ export class TTSService {
   // Resume audio playback
   static async resumeAudio(): Promise<void> {
     try {
-      if (this.sound && this.isPaused) {
-        await this.sound.playAsync();
-        this.isPlaying = true;
-        this.isPaused = false;
-        console.log('▶️ [TTS] Audio resumed');
+      if (this.isPaused) {
+        if (this.currentAudioUri?.startsWith('mock://')) {
+          // Handle mock audio resume
+          this.isPlaying = true;
+          this.isPaused = false;
+          this.mockStartTime = Date.now() - this.currentPosition; // Adjust start time
+          console.log('▶️ [TTS] Mock audio resumed');
+        } else if (this.sound) {
+          await this.sound.playAsync();
+          this.isPlaying = true;
+          this.isPaused = false;
+          console.log('▶️ [TTS] Audio resumed');
+        }
       }
     } catch (error) {
       console.error('💥 [TTS] Failed to resume audio:', error);
@@ -264,7 +327,17 @@ export class TTSService {
   // Stop audio playback
   static async stopAudio(): Promise<void> {
     try {
-      if (this.sound) {
+      if (this.currentAudioUri?.startsWith('mock://')) {
+        // Handle mock audio stop
+        this.isPlaying = false;
+        this.isPaused = false;
+        this.currentPosition = 0;
+        if (this.mockPlaybackTimer) {
+          clearInterval(this.mockPlaybackTimer);
+          this.mockPlaybackTimer = null;
+        }
+        console.log('⏹️ [TTS] Mock audio stopped');
+      } else if (this.sound) {
         await this.sound.stopAsync();
         this.isPlaying = false;
         this.isPaused = false;
@@ -337,15 +410,22 @@ export class TTSService {
   // Clean up resources
   static async cleanup(): Promise<void> {
     try {
+      if (this.mockPlaybackTimer) {
+        clearInterval(this.mockPlaybackTimer);
+        this.mockPlaybackTimer = null;
+      }
+      
       if (this.sound) {
         await this.sound.unloadAsync();
         this.sound = null;
       }
+      
       this.isPlaying = false;
       this.isPaused = false;
       this.currentAudioUri = null;
       this.currentPosition = 0;
       this.duration = 0;
+      this.mockStartTime = 0;
       console.log('🧹 [TTS] Cleanup completed');
     } catch (error) {
       console.error('💥 [TTS] Cleanup failed:', error);
