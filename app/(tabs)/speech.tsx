@@ -274,8 +274,33 @@ const Speech = () => {
       setIsTTSLoading(true);
       console.log('🎤 [Speech] Starting TTS generation...');
       
-      Alert.alert("Generating Speech", "Converting text to speech...", [{ text: "OK" }]);
+      // Check if text will be truncated
+      const maxLength = 4500;
+      const willTruncate = inputText.length > maxLength;
       
+      if (willTruncate) {
+        Alert.alert(
+          "Long Text Detected", 
+          `Your text is ${inputText.length} characters long. Only the first ${maxLength} characters will be converted to speech.`,
+          [
+            { text: "Cancel", style: "cancel", onPress: () => setIsTTSLoading(false) },
+            { text: "Continue", onPress: () => proceedWithTTS() }
+          ]
+        );
+      } else {
+        Alert.alert("Generating Speech", "Converting text to speech...", [{ text: "OK" }]);
+        proceedWithTTS();
+      }
+    } catch (error) {
+      console.error('💥 [Speech] TTS generation failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'TTS generation failed';
+      Alert.alert("TTS Error", errorMessage);
+      setIsTTSLoading(false);
+    }
+  };
+
+  const proceedWithTTS = async () => {
+    try {
       const audioUri = await TTSService.synthesizeSpeech(inputText);
       console.log('✅ [Speech] TTS generation completed:', audioUri);
       
@@ -510,9 +535,21 @@ const Speech = () => {
               textAlignVertical="top"
             />
           </View>
-          <Text className="mt-2 text-sm text-slate-400">
-            {inputText.length} characters
-          </Text>
+          <View className="flex-row justify-between items-center mt-2">
+            <Text className={`text-sm ${
+              inputText.length > 4500 ? 'text-orange-400' : 'text-slate-400'
+            }`}>
+              {inputText.length} characters
+              {inputText.length > 4500 && (
+                <Text className="text-orange-400"> (will be truncated for TTS)</Text>
+              )}
+            </Text>
+            {inputText.length > 4500 && (
+              <Text className="text-xs text-orange-400">
+                Max: 4500 chars
+              </Text>
+            )}
+          </View>
         </View>
 
         {/* TTS Generate Button - Show when no audio */}

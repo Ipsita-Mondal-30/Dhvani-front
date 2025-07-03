@@ -20,6 +20,10 @@ web-build/
 .env
 .env.*.local
 
+# Google Cloud service account keys (NEVER commit these!)
+gcp-service-key.json
+*-service-key.json
+
 # metro + watchman
 .cache/
 .watchmanconfig

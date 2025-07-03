@@ -60,6 +60,15 @@ export class TTSService {
       
       this.isLoading = true;
 
+      // If text is too long, truncate it
+      const maxLength = 4500; // Leave some buffer below 5000 limit
+      let processedText = text;
+      
+      if (text.length > maxLength) {
+        console.log(`⚠️ [TTS] Text too long (${text.length} chars), truncating to ${maxLength} chars`);
+        processedText = text.substring(0, maxLength) + '...';
+      }
+
       // Make API request to backend
       const response = await fetch(`${BackendService.getBaseUrl()}/api/tts`, {
         method: 'POST',
@@ -67,7 +76,7 @@ export class TTSService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          text,
+          text: processedText,
           config,
         }),
       });
@@ -79,7 +88,7 @@ export class TTSService {
         // If TTS API is not available, create a mock audio file
         if (response.status === 404 || response.status === 405) {
           console.log('⚠️ [TTS] TTS API not available, creating mock audio...');
-          const mockAudioUri = await this.createMockAudio(text);
+          const mockAudioUri = await this.createMockAudio(processedText);
           this.currentAudioUri = mockAudioUri;
           this.isLoading = false;
           return mockAudioUri;
