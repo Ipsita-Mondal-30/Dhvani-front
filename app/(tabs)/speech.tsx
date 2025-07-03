@@ -12,6 +12,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import * as DocumentPicker from 'expo-document-picker';
 import Slider from '@react-native-community/slider';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { useAppStore } from "@/store/useAppStore";
 import { BackendService } from "@/services/backendService";
@@ -19,6 +21,7 @@ import { TTSService } from "@/services/ttsService";
 
 const Speech = () => {
   const [inputText, setInputText] = useState("");
+  const [showText, setShowText] = useState(false);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [currentBackendUrl, setCurrentBackendUrl] = useState(BackendService.getBaseUrl());
   
@@ -357,341 +360,192 @@ const Speech = () => {
     }
   };
 
-  return (
-    <View className="flex-1 bg-slate-900">
-      <LinearGradient
-        colors={['#0F172A', '#1E293B', '#334155']}
-        className="absolute inset-0"
-      />
-      
-      <ScrollView
-        className="flex-1 px-6"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-      >
-        {/* Header */}
-        <View className="mt-16 mb-8">
-          <Text className="mb-2 text-3xl font-bold text-center text-white">
-            PDF to Text
-          </Text>
-          <Text className="text-base text-center text-slate-300">
-            Upload PDF files to server for text extraction
-          </Text>
-          <View className="flex-row gap-4 justify-center items-center mt-4">
-            <TouchableOpacity
-              onPress={handleRefreshDocuments}
-              disabled={isLoading}
-              className="px-3 py-1 rounded-lg bg-blue-500/20"
-            >
-              <Text className="text-sm text-blue-400">
-                {isLoading ? "Loading..." : "↻ Refresh"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleTestConnection}
-              disabled={isLoading}
-              className="px-3 py-1 rounded-lg bg-green-500/20"
-            >
-              <Text className="text-sm text-green-400">
-                🔍 Test Connection
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+  // Collapsible text preview logic
+  const previewLines = 3;
+  const textLines = inputText.split('\n');
+  const previewText = textLines.slice(0, previewLines).join('\n');
+  const isLongText = textLines.length > previewLines;
 
-        {/* Backend Info */}
-        <TouchableOpacity
-          onPress={() => setShowDebugInfo(!showDebugInfo)}
-          className="p-3 mb-6 rounded-lg border bg-slate-800/30 border-slate-700/50"
+  return (
+    <View className="flex-1 bg-white">
+      {/* Sticky Header */}
+      <View className="w-full px-6 pt-14 pb-4 bg-white border-b border-gray-100 flex-row items-center justify-between z-10">
+        <Text className="text-2xl font-extrabold text-black tracking-tight">Dhvani</Text>
+        <Ionicons name="volume-high" size={28} color="#2563eb" />
+      </View>
+
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
+      >
+        {/* PDF Upload Card */}
+        <Animated.View
+          entering={FadeIn}
+          exiting={FadeOut}
+          className="mb-6 bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
         >
-          <View className="flex-row justify-between items-center">
-            <Text className="text-sm text-slate-400">
-              Backend: {currentBackendUrl} {showDebugInfo ? '▼' : '▶'}
+          <TouchableOpacity
+            onPress={handleFileUpload}
+            disabled={isUploading || isLoading}
+            className="flex flex-row items-center justify-center"
+            activeOpacity={0.8}
+          >
+            <Ionicons name="cloud-upload-outline" size={32} color="#2563eb" />
+            <Text className="ml-3 text-lg font-bold text-black">
+              {isUploading ? 'Uploading...' : 'Upload PDF'}
             </Text>
-            <TouchableOpacity
-              onPress={handleSwitchBackendUrl}
-              className="px-2 py-1 rounded bg-blue-500/20"
-            >
-              <Text className="text-xs text-blue-400">Switch</Text>
-            </TouchableOpacity>
-          </View>
-          {showDebugInfo && (
-            <View className="pt-2 mt-2 border-t border-slate-700">
-              <Text className="mb-1 text-xs text-slate-500">Platform: {Platform.OS}</Text>
-              <Text className="mb-1 text-xs text-slate-500">Available URLs:</Text>
-              <Text className="text-xs text-slate-400">• Production: https://dhvani-backend.vercel.app</Text>
-              <Text className="text-xs text-slate-400">• iOS Simulator: http://localhost:3000</Text>
-              <Text className="text-xs text-slate-400">• Android Emulator: http://10.0.2.2:3000</Text>
-              <Text className="text-xs text-slate-400">• Physical Device: your computer's IP</Text>
-              <Text className="mt-1 text-xs text-slate-500">
-                Current: {currentBackendUrl}
-              </Text>
+          </TouchableOpacity>
+          {currentPDF && (
+            <View className="mt-4 flex-row items-center justify-between">
+              <View>
+                <Text className="text-base font-semibold text-black">{currentPDF.name}</Text>
+                <Text className="text-xs text-gray-500">{BackendService.formatFileSize(currentPDF.size)}</Text>
+              </View>
+              <View className="bg-blue-100 px-3 py-1 rounded-full">
+                <Text className="text-xs text-blue-700 font-bold">PDF Loaded</Text>
+              </View>
             </View>
           )}
-        </TouchableOpacity>
+        </Animated.View>
 
-        {/* Current PDF Info */}
+        {/* Extracted Text Card */}
         {currentPDF && (
-          <View className="p-4 mb-6 rounded-xl border bg-blue-500/20 border-blue-500/30">
-            <Text className="mb-1 text-sm font-semibold text-blue-400">Current PDF</Text>
-            <Text className="mb-1 text-lg font-bold text-white">{currentPDF.name}</Text>
-            <Text className="text-sm text-slate-300">
-              {BackendService.formatFileSize(currentPDF.size)} • {
-                currentPDF.createdAt && currentPDF.createdAt instanceof Date 
-                  ? currentPDF.createdAt.toLocaleDateString()
-                  : 'Recently added'
-              }
-              {currentPDF.isFromBackend && (
-                <Text className="text-green-400"> • From Server</Text>
+          <Animated.View
+            entering={FadeIn}
+            exiting={FadeOut}
+            className="mb-6 bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+          >
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-lg font-bold text-black">Extracted Text</Text>
+              <TouchableOpacity onPress={() => setShowText(!showText)}>
+                <Ionicons name={showText ? 'chevron-up' : 'chevron-down'} size={24} color="#2563eb" />
+              </TouchableOpacity>
+            </View>
+            <View className="flex-row items-center mb-2">
+              <View className={`px-2 py-0.5 rounded-full ${inputText.length > 4500 ? 'bg-orange-100' : 'bg-gray-100'}`}>
+                <Text className={`text-xs font-semibold ${inputText.length > 4500 ? 'text-orange-600' : 'text-gray-700'}`}>{inputText.length} chars</Text>
+              </View>
+              {inputText.length > 4500 && (
+                <Text className="ml-2 text-xs text-orange-600 font-bold">Truncated for TTS</Text>
               )}
-            </Text>
-          </View>
-        )}
-
-        {/* Upload Section */}
-        <TouchableOpacity
-          onPress={handleFileUpload}
-          disabled={isUploading || isLoading}
-          className={`bg-slate-800/50 border-2 border-dashed border-slate-600 rounded-xl p-8 items-center mb-6 ${
-            isUploading || isLoading ? 'opacity-50' : ''
-          }`}
-        >
-          {isUploading ? (
-            <ActivityIndicator size="large" color="#3B82F6" />
-          ) : (
-            <>
-              <Text className="mb-2 text-2xl">📄</Text>
-              <Text className="mb-1 text-lg font-semibold text-white">
-                {isUploading ? 'Uploading to Server...' : 'Upload PDF'}
-              </Text>
-              <Text className="text-center text-slate-400">
-                Tap to select a PDF file for server processing
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        {/* Text Input Section */}
-        <View className="mb-6">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-xl font-bold text-white">Extracted Text</Text>
-            <View className="flex-row gap-2">
-              <TouchableOpacity
-                onPress={handleClearText}
-                className="px-3 py-1 rounded-lg bg-red-500/20"
-              >
-                <Text className="text-sm font-semibold text-red-400">Clear</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSaveText}
-                className="px-3 py-1 rounded-lg bg-green-500/20"
-              >
-                <Text className="text-sm font-semibold text-green-400">Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleGenerateSpeech}
-                disabled={isTTSLoading || !inputText.trim()}
-                className={`px-3 py-1 rounded-lg ${
-                  isTTSLoading || !inputText.trim() 
-                    ? 'bg-gray-500/20' 
-                    : 'bg-purple-500/20'
-                }`}
-              >
-                <Text className={`text-sm font-semibold ${
-                  isTTSLoading || !inputText.trim() 
-                    ? 'text-gray-400' 
-                    : 'text-purple-400'
-                }`}>
-                  {isTTSLoading ? 'Generating...' : '🎤 TTS'}
+            </View>
+            {!showText ? (
+              <TouchableOpacity onPress={() => setShowText(true)} activeOpacity={0.7}>
+                <Text className="text-base text-gray-700" numberOfLines={previewLines}>
+                  {previewText}
+                  {isLongText && <Text className="text-blue-500 font-bold"> ...more</Text>}
                 </Text>
               </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* PDF Status Indicator */}
-          {currentPDF && inputText && (
-            <View className="mb-3">
-              {inputText.includes('Failed to extract text') || inputText.includes('No text could be extracted') ? (
-                <View className="flex-row items-center p-2 rounded-lg border bg-orange-500/20 border-orange-500/30">
-                  <Text className="text-sm text-orange-400">⚠️ Text extraction failed - you can edit manually</Text>
+            ) : (
+              <>
+                <View className="bg-gray-50 rounded-xl p-4 mb-2">
+                  <TextInput
+                    value={inputText}
+                    onChangeText={setInputText}
+                    placeholder="Edit extracted text..."
+                    placeholderTextColor="#94A3B8"
+                    multiline
+                    numberOfLines={10}
+                    className="text-black text-base leading-6 min-h-[120px]"
+                    textAlignVertical="top"
+                  />
                 </View>
-              ) : (
-                <View className="flex-row items-center p-2 rounded-lg border bg-green-500/20 border-green-500/30">
-                  <Text className="text-sm text-green-400">✅ Text extracted successfully from server</Text>
+                <View className="flex-row gap-2">
+                  <TouchableOpacity
+                    onPress={handleClearText}
+                    className="flex-1 py-2 rounded-lg bg-red-50 border border-red-100"
+                  >
+                    <Text className="text-sm font-semibold text-red-600 text-center">Clear</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleSaveText}
+                    className="flex-1 py-2 rounded-lg bg-green-50 border border-green-100"
+                  >
+                    <Text className="text-sm font-semibold text-green-600 text-center">Save</Text>
+                  </TouchableOpacity>
                 </View>
-              )}
-            </View>
-          )}
-          
-          <View className="p-4 rounded-xl border bg-slate-800/50 border-slate-700/50">
-            <TextInput
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="Upload a PDF file to automatically extract text from server, or type your own text here..."
-              placeholderTextColor="#94A3B8"
-              multiline
-              numberOfLines={12}
-              className="text-white text-base leading-6 min-h-[200px]"
-              textAlignVertical="top"
-            />
-          </View>
-          <View className="flex-row justify-between items-center mt-2">
-            <Text className={`text-sm ${
-              inputText.length > 4500 ? 'text-orange-400' : 'text-slate-400'
-            }`}>
-              {inputText.length} characters
-              {inputText.length > 4500 && (
-                <Text className="text-orange-400"> (will be truncated for TTS)</Text>
-              )}
-            </Text>
-            {inputText.length > 4500 && (
-              <Text className="text-xs text-orange-400">
-                Max: 4500 chars
-              </Text>
+              </>
             )}
-          </View>
-        </View>
+          </Animated.View>
+        )}
 
-        {/* TTS Generate Button - Show when no audio */}
-        {!hasAudio && (
-          <View className="p-4 mb-6 rounded-xl border bg-purple-500/20 border-purple-500/30">
-            <Text className="mb-3 text-lg font-bold text-white">Text-to-Speech</Text>
-            
+        {/* TTS Controls Card */}
+        <Animated.View
+          entering={FadeIn}
+          exiting={FadeOut}
+          className="mb-6 bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+        >
+          <Text className="text-lg font-bold text-black mb-4">Text to Speech</Text>
+          {!hasAudio ? (
             <TouchableOpacity
               onPress={handleGenerateSpeech}
               disabled={isTTSLoading || !inputText.trim()}
-              className={`p-4 rounded-xl items-center ${
-                isTTSLoading || !inputText.trim() 
-                  ? 'bg-gray-500/20' 
-                  : 'bg-purple-500/30'
-              }`}
+              className={`flex-row items-center justify-center p-4 rounded-xl ${isTTSLoading || !inputText.trim() ? 'bg-gray-100' : 'bg-blue-600'}`}
+              activeOpacity={0.85}
             >
-              {isTTSLoading ? (
-                <View className="flex-row items-center">
-                  <ActivityIndicator size="small" color="#A855F7" />
-                  <Text className="ml-2 text-purple-400">Generating speech...</Text>
-                </View>
-              ) : (
-                <View className="flex-row items-center">
-                  <Text className="mr-2 text-2xl">🎤</Text>
-                  <Text className={`text-lg font-semibold ${
-                    !inputText.trim() ? 'text-gray-400' : 'text-purple-400'
-                  }`}>
-                    Convert to Speech
+              <Ionicons name="play" size={24} color={isTTSLoading || !inputText.trim() ? '#94A3B8' : '#fff'} />
+              <Text className={`ml-2 text-lg font-bold ${isTTSLoading || !inputText.trim() ? 'text-gray-400' : 'text-white'}`}>
+                {isTTSLoading ? 'Generating...' : 'Generate Speech'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <>
+              {/* Audio Player */}
+              <View className="mb-4">
+                <Slider
+                  style={{ width: '100%', height: 40 }}
+                  minimumValue={0}
+                  maximumValue={1}
+                  value={duration > 0 ? currentPosition / duration : 0}
+                  onValueChange={handleSeekAudio}
+                  minimumTrackTintColor="#2563eb"
+                  maximumTrackTintColor="#E5E7EB"
+                  thumbTintColor="#2563eb"
+                />
+                <View className="flex-row justify-between">
+                  <Text className="text-xs text-gray-600">
+                    {TTSService.formatTime(currentPosition)}
+                  </Text>
+                  <Text className="text-xs text-gray-600">
+                    {TTSService.formatTime(duration)}
                   </Text>
                 </View>
-              )}
-            </TouchableOpacity>
-            
-            <Text className="mt-2 text-sm text-center text-slate-400">
-              {!inputText.trim() ? 'Add some text to convert to speech' : 'Click to generate audio from your text'}
-            </Text>
-          </View>
-        )}
-
-        {/* Audio Player Controls */}
-        {hasAudio && (
-          <View className="p-4 mb-6 rounded-xl border bg-purple-500/20 border-purple-500/30">
-            <Text className="mb-3 text-lg font-bold text-white">Audio Player</Text>
-            
-            {/* Progress Bar */}
-            <View className="mb-4">
-              <Slider
-                style={{ width: '100%', height: 40 }}
-                minimumValue={0}
-                maximumValue={1}
-                value={duration > 0 ? currentPosition / duration : 0}
-                onValueChange={handleSeekAudio}
-                minimumTrackTintColor="#A855F7"
-                maximumTrackTintColor="#64748B"
-              />
-              <View className="flex-row justify-between">
-                <Text className="text-xs text-slate-400">
-                  {TTSService.formatTime(currentPosition)}
-                </Text>
-                <Text className="text-xs text-slate-400">
-                  {TTSService.formatTime(duration)}
-                </Text>
               </View>
-            </View>
-
-            {/* Control Buttons */}
-            <View className="flex-row gap-4 justify-center items-center">
-              <TouchableOpacity
-                onPress={handleStopAudio}
-                disabled={!isPlaying && !isPaused}
-                className={`p-3 rounded-full ${
-                  !isPlaying && !isPaused ? 'bg-gray-500/20' : 'bg-red-500/20'
-                }`}
-              >
-                <Text className={`text-2xl ${
-                  !isPlaying && !isPaused ? 'text-gray-400' : 'text-red-400'
-                }`}>⏹️</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={isPlaying ? handlePauseAudio : handlePlayAudio}
-                disabled={!hasAudio}
-                className={`p-4 rounded-full ${
-                  !hasAudio ? 'bg-gray-500/20' : 'bg-purple-500/20'
-                }`}
-              >
-                <Text className={`text-3xl ${
-                  !hasAudio ? 'text-gray-400' : 'text-purple-400'
-                }`}>
-                  {isPlaying ? '⏸️' : '▶️'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleGenerateSpeech}
-                disabled={isTTSLoading || !inputText.trim()}
-                className={`p-3 rounded-full ${
-                  isTTSLoading || !inputText.trim() 
-                    ? 'bg-gray-500/20' 
-                    : 'bg-green-500/20'
-                }`}
-              >
-                {isTTSLoading ? (
-                  <ActivityIndicator size="small" color="#9CA3AF" />
-                ) : (
-                  <Text className={`text-2xl ${
-                    !inputText.trim() ? 'text-gray-400' : 'text-green-400'
-                  }`}>🎤</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Status */}
-            <View className="mt-3">
-              <Text className="text-sm text-center text-slate-400">
+              <View className="flex-row gap-4 justify-center items-center">
+                <TouchableOpacity
+                  onPress={handleStopAudio}
+                  disabled={!isPlaying && !isPaused}
+                  className={`p-3 rounded-full ${!isPlaying && !isPaused ? 'bg-gray-100' : 'bg-red-50'}`}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="stop" size={28} color={!isPlaying && !isPaused ? '#94A3B8' : '#ef4444'} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={isPlaying ? handlePauseAudio : handlePlayAudio}
+                  className="p-4 rounded-full bg-blue-600"
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleGenerateSpeech}
+                  disabled={isTTSLoading}
+                  className={`p-3 rounded-full ${isTTSLoading ? 'bg-gray-100' : 'bg-green-50'}`}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="refresh" size={28} color={isTTSLoading ? '#94A3B8' : '#22c55e'} />
+                </TouchableOpacity>
+              </View>
+              <Text className="mt-4 text-sm text-center text-gray-600">
                 {isTTSLoading ? 'Generating speech...' :
-                 isPlaying ? 'Playing...' :
-                 isPaused ? 'Paused' :
-                 hasAudio ? 'Ready to play' :
-                 'Generate speech to play audio'}
+                  isPlaying ? 'Playing audio...' :
+                  isPaused ? 'Paused' :
+                  'Ready to play'}
               </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Error Display */}
-        {error && (
-          <View className="p-4 mb-6 rounded-xl border bg-red-500/20 border-red-500/30">
-            <Text className="font-semibold text-red-400">Error</Text>
-            <Text className="text-sm text-red-300">{error}</Text>
-          </View>
-        )}
-
-        {/* Info */}
-        <View className="p-4 rounded-xl border bg-slate-800/30 border-slate-700/50">
-          <Text className="mb-2 text-lg font-bold text-white">How it works:</Text>
-          <Text className="mb-2 text-slate-300">1. Upload a PDF file to the server</Text>
-          <Text className="mb-2 text-slate-300">2. Server extracts text using Node.js libraries</Text>
-          <Text className="mb-2 text-slate-300">3. Text is saved to database and returned</Text>
-          <Text className="mb-2 text-slate-300">4. Edit the text locally if needed</Text>
-          <Text className="text-slate-300">5. Ready for TTS processing</Text>
-        </View>
+            </>
+          )}
+        </Animated.View>
       </ScrollView>
     </View>
   );
