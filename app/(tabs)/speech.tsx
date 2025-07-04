@@ -1,376 +1,55 @@
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
-  ActivityIndicator,
-  Platform,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import * as DocumentPicker from 'expo-document-picker';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
-import { useAppStore } from "@/store/useAppStore";
 import { BackendService } from "@/services/backendService";
 import { TTSService } from "@/services/ttsService";
+import { useSpeech } from "@/hooks/useSpeech";
 
 const Speech = () => {
-  const [inputText, setInputText] = useState("");
-  const [showText, setShowText] = useState(false);
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
-  const [currentBackendUrl, setCurrentBackendUrl] = useState(BackendService.getBaseUrl());
-  
-  // TTS state
-  const [isTTSLoading, setIsTTSLoading] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [currentPosition, setCurrentPosition] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [hasAudio, setHasAudio] = useState(false);
-  
-  // Timer for updating playback position
-  const positionUpdateInterval = useRef<NodeJS.Timeout | null>(null);
-  
   const {
+    // State
+    inputText,
+    showText,
+    isTTSLoading,
+    isPlaying,
+    isPaused,
+    currentPosition,
+    duration,
+    hasAudio,
     currentPDF,
-    isLoading,
     isUploading,
-    error,
-    updatePDFText,
-    setCurrentPDF,
-    setError,
-    uploadPDFToBackend,
-    loadDocumentsFromBackend,
-  } = useAppStore();
+    isLoading,
 
-  // Auto-detect platform and set appropriate URL
-  useEffect(() => {
-    console.log('🔍 [Speech] Platform detected:', Platform.OS);
-    console.log('🌐 [Speech] Using production backend by default:', BackendService.getBaseUrl());
-    
-    // Use production URL by default (already set in BackendService)
-    // Users can switch to local development URLs if needed
-    setCurrentBackendUrl(BackendService.getBaseUrl());
-  }, []);
+    // Actions
+    setInputText,
+    setShowText,
+    handleFileUpload,
+    handleSaveText,
+    handleClearText,
+    handleGenerateSpeech,
+    handlePlayAudio,
+    handlePauseAudio,
+    handleStopAudio,
+    handleSeekAudio,
+    getPreviewText,
+  } = useSpeech();
 
-  // Initialize TTS and load documents on component mount
-  useEffect(() => {
-    const initializeServices = async () => {
-      try {
-        console.log('🔄 [Speech] Component mounted, initializing services...');
-        
-        // Initialize TTS service
-        await TTSService.initialize();
-        console.log('✅ [Speech] TTS Service initialized');
-        
-        // Load documents from backend
-        await loadDocumentsFromBackend();
-        console.log('✅ [Speech] Documents loaded');
-      } catch (error) {
-        console.error('💥 [Speech] Failed to initialize services:', error);
-      }
-    };
-
-    initializeServices();
-    
-    // Start position update timer
-    positionUpdateInterval.current = setInterval(updatePlaybackStatus, 1000);
-    
-    // Cleanup on unmount
-    return () => {
-      if (positionUpdateInterval.current) {
-        clearInterval(positionUpdateInterval.current);
-      }
-      TTSService.cleanup();
-    };
-  }, []);
-
-  // Update playback status from TTS service
-  const updatePlaybackStatus = () => {
-    const status = TTSService.getPlaybackStatus();
-    setIsPlaying(status.isPlaying);
-    setIsPaused(status.isPaused);
-    setCurrentPosition(status.currentPosition);
-    setDuration(status.duration);
-    setHasAudio(status.hasAudio);
-  };
-
-  // Update input text when current PDF changes
-  useEffect(() => {
-    if (currentPDF) {
-      console.log('📄 [Speech] Loading text from current PDF:', currentPDF.name);
-      setInputText(currentPDF.extractedText);
-    } else {
-      setInputText("");
-    }
-  }, [currentPDF]);
-
-  const handleFileUpload = async () => {
-    console.log('🚀 [Speech] Starting PDF upload...');
-    console.log('🔗 [Speech] Backend URL:', BackendService.getBaseUrl());
-    
-    try {
-      setError(null);
-      
-      // Pick PDF file
-      console.log('📂 [Speech] Opening document picker...');
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled) {
-        console.log('👤 [Speech] User cancelled file selection');
-        return;
-      }
-
-      const file = result.assets[0];
-      console.log('✅ [Speech] File picked successfully:');
-      console.log('  - Name:', file.name);
-      console.log('  - URI:', file.uri);
-      console.log('  - Size:', file.size);
-      console.log('  - Type:', file.mimeType);
-
-      // Show upload progress
-      Alert.alert("Uploading", `Uploading "${file.name}" to server for text extraction...`, [{ text: "OK" }]);
-      
-      // Upload to backend
-      console.log('📤 [Speech] Starting backend upload...');
-      const pdfFile = await uploadPDFToBackend(file.uri, file.name, file.size || 0);
-      
-      console.log('🎉 [Speech] Upload completed successfully!');
-      
-      // Show success message
-      Alert.alert(
-        "Text Extracted!", 
-        `Successfully extracted ${pdfFile.extractedText.length} characters from "${pdfFile.name}".`,
-        [{ text: "Great!" }]
-      );
-
-    } catch (error) {
-      console.error('💥 [Speech] Upload error occurred:');
-      console.error('  - Error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-      console.error('  - Error message:', errorMessage);
-      
-      Alert.alert(
-        "Upload Failed", 
-        errorMessage,
-        [
-          { text: "OK" },
-          { 
-            text: "Show Debug Info", 
-            onPress: () => setShowDebugInfo(true)
-          }
-        ]
-      );
-    }
-  };
-
-  const handleSaveText = () => {
-    if (!inputText.trim()) {
-      Alert.alert("No text to save", "Please add some text before saving.");
-      return;
-    }
-
-    if (currentPDF) {
-      updatePDFText(currentPDF.id, inputText);
-      Alert.alert("Saved", "Your changes have been saved locally.");
-    } else {
-      Alert.alert("No PDF Selected", "Please upload a PDF first.");
-    }
-  };
-
-  const handleClearText = () => {
-    Alert.alert(
-      "Clear Text",
-      "Are you sure you want to clear all text?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Clear", 
-          style: "destructive",
-          onPress: () => setInputText("")
-        }
-      ]
-    );
-  };
-
-  const handleRefreshDocuments = async () => {
-    try {
-      console.log('🔄 [Speech] Refreshing documents from backend...');
-      await loadDocumentsFromBackend();
-      Alert.alert("Refreshed", "Documents loaded from server.");
-    } catch (error) {
-      console.error('💥 [Speech] Refresh error:', error);
-      Alert.alert("Error", "Failed to refresh documents.");
-    }
-  };
-
-  const handleTestConnection = async () => {
-    try {
-      console.log('🔍 [Speech] Testing backend connection...');
-      Alert.alert("Testing Connection", "Checking server connectivity...");
-      
-      const healthData = await BackendService.checkHealth();
-      Alert.alert(
-        "Connection Test Passed", 
-        `✅ ${healthData.message}\n\nServer Time: ${new Date(healthData.timestamp).toLocaleString()}`
-      );
-    } catch (error) {
-      console.error('💥 [Speech] Connection test failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Connection failed';
-      Alert.alert("Connection Test Failed", `❌ ${errorMessage}`);
-    }
-  };
-
-  const handleSwitchBackendUrl = () => {
-    const options = [
-      { text: 'Cancel', style: 'cancel' as const },
-      { 
-        text: 'Production (Vercel)', 
-        onPress: () => {
-          BackendService.setUrlForPlatform('production');
-          setCurrentBackendUrl(BackendService.getBaseUrl());
-          Alert.alert('URL Changed', 'Now using Production URL (Vercel)');
-        }
-      },
-      { 
-        text: 'iOS Simulator (localhost)', 
-        onPress: () => {
-          BackendService.setUrlForPlatform('ios');
-          setCurrentBackendUrl(BackendService.getBaseUrl());
-          Alert.alert('URL Changed', 'Now using iOS Simulator URL');
-        }
-      },
-      { 
-        text: 'Android Emulator (10.0.2.2)', 
-        onPress: () => {
-          BackendService.setUrlForPlatform('android');
-          setCurrentBackendUrl(BackendService.getBaseUrl());
-          Alert.alert('URL Changed', 'Now using Android Emulator URL');
-        }
-      },
-    ];
-
-    Alert.alert(
-      'Switch Backend URL',
-      `Current: ${currentBackendUrl}\n\nChoose the URL for your platform:`,
-      options
-    );
-  };
-
-  // TTS Handlers
-  const handleGenerateSpeech = async () => {
-    if (!inputText.trim()) {
-      Alert.alert("No Text", "Please add some text to convert to speech.");
-      return;
-    }
-
-    try {
-      setIsTTSLoading(true);
-      console.log('🎤 [Speech] Starting TTS generation...');
-      
-      // Check if text will be truncated
-      const maxLength = 4500;
-      const willTruncate = inputText.length > maxLength;
-      
-      if (willTruncate) {
-        Alert.alert(
-          "Long Text Detected", 
-          `Your text is ${inputText.length} characters long. Only the first ${maxLength} characters will be converted to speech.`,
-          [
-            { text: "Cancel", style: "cancel", onPress: () => setIsTTSLoading(false) },
-            { text: "Continue", onPress: () => proceedWithTTS() }
-          ]
-        );
-      } else {
-        Alert.alert("Generating Speech", "Converting text to speech...", [{ text: "OK" }]);
-        proceedWithTTS();
-      }
-    } catch (error) {
-      console.error('💥 [Speech] TTS generation failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'TTS generation failed';
-      Alert.alert("TTS Error", errorMessage);
-      setIsTTSLoading(false);
-    }
-  };
-
-  const proceedWithTTS = async () => {
-    try {
-      const audioUri = await TTSService.synthesizeSpeech(inputText);
-      console.log('✅ [Speech] TTS generation completed:', audioUri);
-      
-      setHasAudio(true);
-      Alert.alert("Speech Ready!", "Your audio is ready to play.", [{ text: "Play", onPress: handlePlayAudio }]);
-    } catch (error) {
-      console.error('💥 [Speech] TTS generation failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'TTS generation failed';
-      Alert.alert("TTS Error", errorMessage);
-    } finally {
-      setIsTTSLoading(false);
-    }
-  };
-
-  const handlePlayAudio = async () => {
-    try {
-      if (isPaused) {
-        await TTSService.resumeAudio();
-      } else {
-        await TTSService.playAudio();
-      }
-      updatePlaybackStatus();
-    } catch (error) {
-      console.error('💥 [Speech] Play audio failed:', error);
-      Alert.alert("Playback Error", "Failed to play audio");
-    }
-  };
-
-  const handlePauseAudio = async () => {
-    try {
-      await TTSService.pauseAudio();
-      updatePlaybackStatus();
-    } catch (error) {
-      console.error('💥 [Speech] Pause audio failed:', error);
-    }
-  };
-
-  const handleStopAudio = async () => {
-    try {
-      await TTSService.stopAudio();
-      updatePlaybackStatus();
-    } catch (error) {
-      console.error('💥 [Speech] Stop audio failed:', error);
-    }
-  };
-
-  const handleSeekAudio = async (value: number) => {
-    try {
-      const position = value * duration;
-      await TTSService.seekTo(position);
-      setCurrentPosition(position);
-    } catch (error) {
-      console.error('💥 [Speech] Seek audio failed:', error);
-    }
-  };
-
-  // Collapsible text preview logic
-  const previewLines = 3;
-  const textLines = inputText.split('\n');
-  const previewText = textLines.slice(0, previewLines).join('\n');
-  const isLongText = textLines.length > previewLines;
+  const { previewText, isLongText } = getPreviewText();
 
   return (
     <View className="flex-1 bg-white">
       {/* Sticky Header */}
-      <View className="w-full px-6 pt-14 pb-4 bg-white border-b border-gray-100 flex-row items-center justify-between z-10">
-        <Text className="text-2xl font-extrabold text-black tracking-tight">Dhvani</Text>
+      <View className="z-10 flex-row justify-between items-center px-6 pt-14 pb-4 w-full bg-white border-b border-gray-100">
+        <Text className="text-2xl font-extrabold tracking-tight text-black">Dhvani</Text>
         <Ionicons name="volume-high" size={28} color="#2563eb" />
       </View>
 
@@ -383,12 +62,12 @@ const Speech = () => {
         <Animated.View
           entering={FadeIn}
           exiting={FadeOut}
-          className="mb-6 bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+          className="p-6 mb-6 bg-white rounded-2xl border border-gray-100 shadow-lg"
         >
           <TouchableOpacity
             onPress={handleFileUpload}
             disabled={isUploading || isLoading}
-            className="flex flex-row items-center justify-center"
+            className="flex flex-row justify-center items-center"
             activeOpacity={0.8}
           >
             <Ionicons name="cloud-upload-outline" size={32} color="#2563eb" />
@@ -397,13 +76,13 @@ const Speech = () => {
             </Text>
           </TouchableOpacity>
           {currentPDF && (
-            <View className="mt-4 flex-row items-center justify-between">
+            <View className="flex-row justify-between items-center mt-4">
               <View>
                 <Text className="text-base font-semibold text-black">{currentPDF.name}</Text>
                 <Text className="text-xs text-gray-500">{BackendService.formatFileSize(currentPDF.size)}</Text>
               </View>
-              <View className="bg-blue-100 px-3 py-1 rounded-full">
-                <Text className="text-xs text-blue-700 font-bold">PDF Loaded</Text>
+              <View className="px-3 py-1 bg-blue-100 rounded-full">
+                <Text className="text-xs font-bold text-blue-700">PDF Loaded</Text>
               </View>
             </View>
           )}
@@ -429,9 +108,9 @@ const Speech = () => {
           <Animated.View
             entering={FadeIn}
             exiting={FadeOut}
-            className="mb-6 bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+            className="p-6 mb-6 bg-white rounded-2xl border border-gray-100 shadow-lg"
           >
-            <View className="flex-row items-center justify-between mb-2">
+            <View className="flex-row justify-between items-center mb-2">
               <Text className="text-lg font-bold text-black">Extracted Text</Text>
               <TouchableOpacity onPress={() => setShowText(!showText)}>
                 <Ionicons name={showText ? 'chevron-up' : 'chevron-down'} size={24} color="#2563eb" />
@@ -442,19 +121,19 @@ const Speech = () => {
                 <Text className={`text-xs font-semibold ${inputText.length > 4500 ? 'text-orange-600' : 'text-gray-700'}`}>{inputText.length} chars</Text>
               </View>
               {inputText.length > 4500 && (
-                <Text className="ml-2 text-xs text-orange-600 font-bold">Truncated for TTS</Text>
+                <Text className="ml-2 text-xs font-bold text-orange-600">Truncated for TTS</Text>
               )}
             </View>
             {!showText ? (
               <TouchableOpacity onPress={() => setShowText(true)} activeOpacity={0.7}>
-                <Text className="text-base text-gray-700" numberOfLines={previewLines}>
+                <Text className="text-base text-gray-700" numberOfLines={3}>
                   {previewText}
-                  {isLongText && <Text className="text-blue-500 font-bold"> ...more</Text>}
+                  {isLongText && <Text className="font-bold text-blue-500"> ...more</Text>}
                 </Text>
               </TouchableOpacity>
             ) : (
               <>
-                <View className="bg-gray-50 rounded-xl p-4 mb-2">
+                <View className="p-4 mb-2 bg-gray-50 rounded-xl">
                   <TextInput
                     value={inputText}
                     onChangeText={setInputText}
@@ -469,15 +148,15 @@ const Speech = () => {
                 <View className="flex-row gap-2">
                   <TouchableOpacity
                     onPress={handleClearText}
-                    className="flex-1 py-2 rounded-lg bg-red-50 border border-red-100"
+                    className="flex-1 py-2 bg-red-50 rounded-lg border border-red-100"
                   >
-                    <Text className="text-sm font-semibold text-red-600 text-center">Clear</Text>
+                    <Text className="text-sm font-semibold text-center text-red-600">Clear</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleSaveText}
-                    className="flex-1 py-2 rounded-lg bg-green-50 border border-green-100"
+                    className="flex-1 py-2 bg-green-50 rounded-lg border border-green-100"
                   >
-                    <Text className="text-sm font-semibold text-green-600 text-center">Save</Text>
+                    <Text className="text-sm font-semibold text-center text-green-600">Save</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -489,9 +168,9 @@ const Speech = () => {
         <Animated.View
           entering={FadeIn}
           exiting={FadeOut}
-          className="mb-6 bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+          className="p-6 mb-6 bg-white rounded-2xl border border-gray-100 shadow-lg"
         >
-          <Text className="text-lg font-bold text-black mb-4">Text to Speech</Text>
+          <Text className="mb-4 text-lg font-bold text-black">Text to Speech</Text>
           {!hasAudio ? (
             <TouchableOpacity
               onPress={handleGenerateSpeech}
@@ -538,7 +217,7 @@ const Speech = () => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={isPlaying ? handlePauseAudio : handlePlayAudio}
-                  className="p-4 rounded-full bg-blue-600"
+                  className="p-4 bg-blue-600 rounded-full"
                   activeOpacity={0.8}
                 >
                   <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#fff" />
