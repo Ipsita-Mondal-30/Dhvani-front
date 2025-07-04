@@ -410,6 +410,21 @@ const Speech = () => {
         </Animated.View>
 
         {/* Extracted Text Card */}
+        {currentPDF && typeof inputText === 'string' && (
+          <View className="mb-3">
+            {(inputText || '').includes('Failed to extract text') || (inputText || '').includes('No text could be extracted') ? (
+              <View className="flex-row items-center p-2 rounded-lg border bg-orange-500/20 border-orange-500/30">
+                <Text className="text-sm text-orange-400">⚠️ Text extraction failed - you can edit manually</Text>
+              </View>
+            ) : (
+              <View className="flex-row items-center p-2 rounded-lg border bg-green-500/20 border-green-500/30">
+                <Text className="text-sm text-green-400">✅ Text extracted successfully</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Extracted Text Card */}
         {currentPDF && (
           <Animated.View
             entering={FadeIn}
@@ -498,7 +513,7 @@ const Speech = () => {
                   minimumValue={0}
                   maximumValue={1}
                   value={duration > 0 ? currentPosition / duration : 0}
-                  onValueChange={handleSeekAudio}
+                  onSlidingComplete={handleSeekAudio}
                   minimumTrackTintColor="#2563eb"
                   maximumTrackTintColor="#E5E7EB"
                   thumbTintColor="#2563eb"

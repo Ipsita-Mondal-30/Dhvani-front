@@ -11,7 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAppStore } from "@/store/useAppStore";
 import { PDFService } from "@/services/pdfService";
 
-const History = () => {
+const History: React.FC = () => {
   const { pdfFiles, setCurrentPDF, removePDFFile } = useAppStore();
 
   const handleSelectPDF = (pdf: any) => {
@@ -127,6 +127,6 @@ const History = () => {
       </ScrollView>
     </View>
   );
-};
+}
 
 export default History;

@@ -88,6 +88,7 @@ export const useAppStore = create<AppState>()(
 
       // Actions
       addPDFFile: (file) => {
+        if (!file) return;
         console.log('📁 [Store] Adding PDF file:', file.name);
         set((state) => ({
           pdfFiles: [file, ...state.pdfFiles],
@@ -97,6 +98,7 @@ export const useAppStore = create<AppState>()(
       },
 
       updatePDFText: (id, text) => {
+        if (!id || text === undefined) return;
         console.log('✏️ [Store] Updating PDF text for ID:', id);
         set((state) => ({
           pdfFiles: state.pdfFiles.map((file) =>
@@ -109,6 +111,7 @@ export const useAppStore = create<AppState>()(
       },
 
       removePDFFile: (id) => {
+        if (!id) return;
         console.log('🗑️ [Store] Removing PDF file with ID:', id);
         set((state) => ({
           pdfFiles: state.pdfFiles.filter((file) => file.id !== id),
@@ -122,15 +125,15 @@ export const useAppStore = create<AppState>()(
       },
 
       setLoading: (loading) => {
-        set({ isLoading: loading });
+        set({ isLoading: !!loading });
       },
 
       setUploading: (uploading) => {
-        set({ isUploading: uploading });
+        set({ isUploading: !!uploading });
       },
 
       setError: (error) => {
-        set({ error });
+        set({ error: error || null });
       },
 
       clearAll: () => {
@@ -210,29 +213,41 @@ export const useAppStore = create<AppState>()(
       name: 'dhvani-storage',
       storage: {
         getItem: async (name) => {
-          console.log('📖 [Store] Loading data from AsyncStorage:', name);
-          const value = await AsyncStorage.getItem(name);
-          if (value) {
+          try {
+            console.log('📖 [Store] Loading data from AsyncStorage:', name);
+            const value = await AsyncStorage.getItem(name);
+            if (!value) return null;
+            
             const parsed = JSON.parse(value);
             const revivedData = reviveDates(parsed);
             console.log('📖 [Store] Data loaded and dates revived');
             return revivedData;
+          } catch (error) {
+            console.error('💥 [Store] Error loading data:', error);
+            return null;
           }
-          return null;
         },
         setItem: async (name, value) => {
-          console.log('💾 [Store] Saving data to AsyncStorage:', name);
-          await AsyncStorage.setItem(name, JSON.stringify(value));
+          try {
+            console.log('💾 [Store] Saving data to AsyncStorage:', name);
+            await AsyncStorage.setItem(name, JSON.stringify(value));
+          } catch (error) {
+            console.error('💥 [Store] Error saving data:', error);
+          }
         },
         removeItem: async (name) => {
-          console.log('🗑️ [Store] Removing data from AsyncStorage:', name);
-          await AsyncStorage.removeItem(name);
+          try {
+            console.log('🗑️ [Store] Removing data from AsyncStorage:', name);
+            await AsyncStorage.removeItem(name);
+          } catch (error) {
+            console.error('💥 [Store] Error removing data:', error);
+          }
         },
       },
       // Only persist the PDF files, not loading states
-      partialize: (state) => ({
-        pdfFiles: state.pdfFiles,
-        currentPDF: state.currentPDF,
+      partialize: (state: AppState) => ({
+        pdfFiles: state.pdfFiles || [],
+        currentPDF: state.currentPDF || null,
       }),
     }
   )

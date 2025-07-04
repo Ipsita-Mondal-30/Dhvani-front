@@ -1,3 +1,4 @@
+// TODO: Migrate to expo-audio when it's fully stable
 import { Audio } from 'expo-av';
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
@@ -27,6 +28,7 @@ export class TTSService {
   private static duration = 0;
   private static mockPlaybackTimer: NodeJS.Timeout | null = null;
   private static mockStartTime = 0;
+  private static seekDebounceTimer: NodeJS.Timeout | null = null;
 
   // Initialize the service
   static async initialize(): Promise<void> {
@@ -199,33 +201,45 @@ export class TTSService {
       console.log('▶️ [TTS] Playing audio:', uri);
 
       // Handle mock audio
-      if (uri.startsWith('mock://')) {
+      if (uri?.startsWith('mock://')) {
         console.log('🎭 [TTS] Playing mock audio - simulating playback');
         this.isPlaying = true;
         this.isPaused = false;
         this.duration = 3000; // 3 seconds mock duration
         this.mockStartTime = Date.now();
+        this.currentPosition = 0;
         
         // Clear any existing timer
         if (this.mockPlaybackTimer) {
           clearInterval(this.mockPlaybackTimer);
+          this.mockPlaybackTimer = null;
         }
         
         // Simulate playback progress
         this.mockPlaybackTimer = setInterval(() => {
-          if (this.isPlaying && !this.isPaused) {
-            const elapsed = Date.now() - this.mockStartTime;
-            this.currentPosition = Math.min(elapsed, this.duration);
-            
-            if (this.currentPosition >= this.duration) {
-              console.log('🏁 [TTS] Mock audio playback finished');
-              this.isPlaying = false;
-              this.isPaused = false;
-              this.currentPosition = 0;
-              if (this.mockPlaybackTimer) {
-                clearInterval(this.mockPlaybackTimer);
-                this.mockPlaybackTimer = null;
+          try {
+            if (this.isPlaying && !this.isPaused) {
+              const elapsed = Date.now() - this.mockStartTime;
+              this.currentPosition = Math.min(elapsed, this.duration);
+              
+              if (this.currentPosition >= this.duration) {
+                console.log('🏁 [TTS] Mock audio playback finished');
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.currentPosition = 0;
+                if (this.mockPlaybackTimer) {
+                  clearInterval(this.mockPlaybackTimer);
+                  this.mockPlaybackTimer = null;
+                }
               }
+            }
+          } catch (error) {
+            console.error('💥 [TTS] Mock playback error:', error);
+            this.isPlaying = false;
+            this.isPaused = false;
+            if (this.mockPlaybackTimer) {
+              clearInterval(this.mockPlaybackTimer);
+              this.mockPlaybackTimer = null;
             }
           }
         }, 100);
@@ -258,10 +272,13 @@ export class TTSService {
       this.currentPosition = 0;
 
       // Set up playback status update
-      this.sound.setOnPlaybackStatusUpdate((status) => {
+      this.sound.setOnPlaybackStatusUpdate((status: any) => {
+        if (!status) return;
+        
         if (status.isLoaded) {
-          this.currentPosition = status.positionMillis || 0;
-          this.duration = status.durationMillis || 0;
+          this.currentPosition = status.positionMillis ?? 0;
+          this.duration = status.durationMillis ?? 0;
+          this.isPlaying = status.isPlaying ?? false;
           
           if (status.didJustFinish) {
             console.log('🏁 [TTS] Audio playback finished');
@@ -269,6 +286,8 @@ export class TTSService {
             this.isPaused = false;
             this.currentPosition = 0;
           }
+        } else {
+          console.log('⚠️ [TTS] Audio not loaded:', status);
         }
       });
 
@@ -353,11 +372,25 @@ export class TTSService {
   // Seek to position in audio
   static async seekTo(positionMillis: number): Promise<void> {
     try {
-      if (this.sound) {
-        await this.sound.setPositionAsync(positionMillis);
-        this.currentPosition = positionMillis;
-        console.log('⏩ [TTS] Audio seeked to:', positionMillis);
+      // Clear any existing debounce timer
+      if (this.seekDebounceTimer) {
+        clearTimeout(this.seekDebounceTimer);
       }
+
+      // Update the current position immediately for UI feedback
+      this.currentPosition = positionMillis;
+
+      // Debounce the actual seek operation
+      this.seekDebounceTimer = setTimeout(async () => {
+        if (this.sound) {
+          // Only seek if we're not at the target position already
+          const status = await this.sound.getStatusAsync() as any;
+          if (Math.abs(status.positionMillis - positionMillis) > 50) {
+            await this.sound.setPositionAsync(positionMillis);
+            console.log('⏩ [TTS] Audio seeked to:', positionMillis);
+          }
+        }
+      }, 100); // Wait 100ms before actually seeking
     } catch (error) {
       console.error('💥 [TTS] Failed to seek audio:', error);
       throw error;
@@ -410,25 +443,43 @@ export class TTSService {
   // Clean up resources
   static async cleanup(): Promise<void> {
     try {
+      // Stop any ongoing playback first
+      try {
+        await this.stopAudio();
+      } catch (error) {
+        console.warn('⚠️ [TTS] Error stopping audio during cleanup:', error);
+      }
+      
+      // Clear mock timer
       if (this.mockPlaybackTimer) {
         clearInterval(this.mockPlaybackTimer);
         this.mockPlaybackTimer = null;
       }
       
+      // Unload sound
       if (this.sound) {
-        await this.sound.unloadAsync();
+        try {
+          await this.sound.unloadAsync();
+        } catch (error) {
+          console.warn('⚠️ [TTS] Error unloading sound during cleanup:', error);
+        }
         this.sound = null;
       }
       
+      // Reset all state
       this.isPlaying = false;
       this.isPaused = false;
+      this.isLoading = false;
       this.currentAudioUri = null;
       this.currentPosition = 0;
       this.duration = 0;
       this.mockStartTime = 0;
+      
       console.log('🧹 [TTS] Cleanup completed');
     } catch (error) {
       console.error('💥 [TTS] Cleanup failed:', error);
+      // Don't throw error during cleanup to avoid app crashes
+      console.warn('⚠️ [TTS] Continuing despite cleanup error');
     }
   }
 } 

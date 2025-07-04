@@ -160,7 +160,7 @@ export class BackendService {
       console.error('  - Error message:', (error as any)?.message);
       console.error('  - Full error:', error);
       
-      if ((error as any)?.message?.includes('Network request failed')) {
+      if ((error as any)?.message && typeof (error as any).message === 'string' && (error as any).message.includes('Network request failed')) {
         throw new Error(`Network connection failed. Please check:\n1. Backend server is running at ${this.BASE_URL}\n2. Your device can reach the server\n3. Firewall/network settings allow the connection`);
       }
       

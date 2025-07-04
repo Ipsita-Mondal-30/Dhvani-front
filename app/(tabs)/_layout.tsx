@@ -1,10 +1,14 @@
 import { Tabs } from "expo-router";
-import { ImageBackground, Image, Text, View } from "react-native";
-
+import { Image, View } from "react-native";
 import { icons } from "@/constants/icons";
-import { images } from "@/constants/images";
 
-function TabIcon({ focused, icon, title }: any) {
+interface TabIconProps {
+  focused: boolean;
+  icon: any;
+  title: string;
+}
+
+function TabIcon({ focused, icon, title }: TabIconProps) {
   return (
     <View className="items-center">
       <Image 
@@ -19,6 +23,7 @@ function TabIcon({ focused, icon, title }: any) {
 export default function TabsLayout() {
   return (
     <Tabs
+      initialRouteName="index"
       screenOptions={{
         tabBarShowLabel: true,
         tabBarLabelStyle: {
@@ -43,13 +48,14 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: "#3B82F6",
         tabBarInactiveTintColor: "#6B7280",
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
+          href: "/",
           title: "Home",
-          headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} icon={icons.home} title="Home" />
           ),
@@ -59,8 +65,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="speech"
         options={{
+          href: "/speech",
           title: "Text to Speech",
-          headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} icon={icons.play} title="Speech" />
           ),
@@ -70,8 +76,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="history"
         options={{
+          href: "/history",
           title: "History",
-          headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} icon={icons.save} title="History" />
           ),
@@ -81,8 +87,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          href: "/profile",
           title: "Profile",
-          headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} icon={icons.person} title="Profile" />
           ),

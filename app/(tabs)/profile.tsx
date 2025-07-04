@@ -11,7 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAppStore } from "@/store/useAppStore";
 import { PDFService } from "@/services/pdfService";
 
-const Profile = () => {
+function Profile() {
   const { pdfFiles, clearAll } = useAppStore();
 
   const handleClearAllData = () => {
@@ -135,6 +135,6 @@ const Profile = () => {
       </ScrollView>
     </View>
   );
-};
+}
 
 export default Profile;
