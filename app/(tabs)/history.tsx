@@ -11,7 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAppStore } from "@/store/useAppStore";
 import { PDFService } from "@/services/pdfService";
 
-const History: React.FC = () => {
+const History = () => {
   const { pdfFiles, setCurrentPDF, removePDFFile } = useAppStore();
 
   const handleSelectPDF = (pdf: any) => {
@@ -58,7 +58,7 @@ const History: React.FC = () => {
 
         {/* Stats */}
         <View className="p-4 mb-6 rounded-xl border bg-slate-800/30 border-slate-700/50">
-          <Text className="text-lg font-bold text-white mb-2">Storage Info</Text>
+          <Text className="mb-2 text-lg font-bold text-white">Storage Info</Text>
           <Text className="text-slate-300">
             Total PDFs: {pdfFiles.length}
           </Text>
@@ -71,9 +71,9 @@ const History: React.FC = () => {
 
         {/* PDF Files List */}
         {pdfFiles.length === 0 ? (
-          <View className="p-8 rounded-xl border bg-slate-800/30 border-slate-700/50 items-center">
-            <Text className="text-2xl mb-4">📄</Text>
-            <Text className="text-lg font-semibold text-white mb-2">No PDFs Yet</Text>
+          <View className="items-center p-8 rounded-xl border bg-slate-800/30 border-slate-700/50">
+            <Text className="mb-4 text-2xl">📄</Text>
+            <Text className="mb-2 text-lg font-semibold text-white">No PDFs Yet</Text>
             <Text className="text-center text-slate-400">
               Upload a PDF file in the Speech tab to get started
             </Text>
@@ -86,7 +86,7 @@ const History: React.FC = () => {
             >
               <View className="flex-row justify-between items-start mb-2">
                 <View className="flex-1 mr-4">
-                  <Text className="text-lg font-bold text-white mb-1">
+                  <Text className="mb-1 text-lg font-bold text-white">
                     {pdf.name}
                   </Text>
                   <Text className="text-sm text-slate-400">
@@ -105,18 +105,18 @@ const History: React.FC = () => {
               <View className="flex-row gap-2 mt-3">
                 <TouchableOpacity
                   onPress={() => handleSelectPDF(pdf)}
-                  className="flex-1 bg-blue-500 rounded-lg py-2 px-4"
+                  className="flex-1 px-4 py-2 bg-blue-500 rounded-lg"
                 >
-                  <Text className="text-center font-semibold text-white">
+                  <Text className="font-semibold text-center text-white">
                     Select
                   </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
                   onPress={() => handleDeletePDF(pdf)}
-                  className="bg-red-500/20 rounded-lg py-2 px-4"
+                  className="px-4 py-2 rounded-lg bg-red-500/20"
                 >
-                  <Text className="text-center font-semibold text-red-400">
+                  <Text className="font-semibold text-center text-red-400">
                     Delete
                   </Text>
                 </TouchableOpacity>

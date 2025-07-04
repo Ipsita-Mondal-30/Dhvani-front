@@ -5,10 +5,12 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  StatusBar,
 } from "react-native";
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { LinearGradient } from "expo-linear-gradient";
 
 import { BackendService } from "@/services/backendService";
 import { TTSService } from "@/services/ttsService";
@@ -46,58 +48,97 @@ const Speech = () => {
   const { previewText, isLongText } = getPreviewText();
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Sticky Header */}
-      <View className="z-10 flex-row justify-between items-center px-6 pt-14 pb-4 w-full bg-white border-b border-gray-100">
-        <Text className="text-2xl font-extrabold tracking-tight text-black">Dhvani</Text>
-        <Ionicons name="volume-high" size={28} color="#2563eb" />
+    <View className="flex-1 bg-gray-50">
+      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      
+      {/* Header */}
+      <View className="px-6 pt-14 pb-4 bg-white border-b border-gray-100 shadow-sm">
+        <View className="flex-row justify-between items-center">
+          <Text className="text-2xl font-black text-black">Dhvani</Text>
+          <View className="justify-center items-center w-10 h-10 bg-blue-50 rounded-xl">
+            <Ionicons name="volume-high" size={24} color="#2563eb" />
+          </View>
+        </View>
       </View>
 
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
       >
         {/* PDF Upload Card */}
         <Animated.View
           entering={FadeIn}
           exiting={FadeOut}
-          className="p-6 mb-6 bg-white rounded-2xl border border-gray-100 shadow-lg"
+          className="mb-5"
         >
           <TouchableOpacity
             onPress={handleFileUpload}
             disabled={isUploading || isLoading}
-            className="flex flex-row justify-center items-center"
+            className="p-6 bg-white rounded-xl border border-gray-100 shadow-md"
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
             activeOpacity={0.8}
           >
-            <Ionicons name="cloud-upload-outline" size={32} color="#2563eb" />
-            <Text className="ml-3 text-lg font-bold text-black">
-              {isUploading ? 'Uploading...' : 'Upload PDF'}
-            </Text>
-          </TouchableOpacity>
-          {currentPDF && (
-            <View className="flex-row justify-between items-center mt-4">
-              <View>
-                <Text className="text-base font-semibold text-black">{currentPDF.name}</Text>
-                <Text className="text-xs text-gray-500">{BackendService.formatFileSize(currentPDF.size)}</Text>
+            <View className="flex-row justify-center items-center">
+              <View className="justify-center items-center mr-4 w-12 h-12 bg-blue-50 rounded-xl">
+                <Ionicons 
+                  name={isUploading ? "hourglass-outline" : "cloud-upload-outline"} 
+                  size={24} 
+                  color="#2563eb" 
+                />
               </View>
-              <View className="px-3 py-1 bg-blue-100 rounded-full">
-                <Text className="text-xs font-bold text-blue-700">PDF Loaded</Text>
+              <View className="flex-1">
+                <Text className="text-lg font-bold text-black">
+                  {isUploading ? 'Uploading PDF...' : 'Upload PDF Document'}
+                </Text>
+                <Text className="mt-1 text-sm text-gray-600">
+                  {isUploading ? 'Please wait while we process your file' : 'Tap to select a PDF file from your device'}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+          
+          {currentPDF && (
+            <View className="p-4 mt-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <View className="flex-row justify-between items-center">
+                <View className="flex-1 mr-3">
+                  <Text className="text-base font-bold text-black">{currentPDF.name}</Text>
+                  <Text className="text-sm text-gray-500">{BackendService.formatFileSize(currentPDF.size)}</Text>
+                </View>
+                <View className="px-3 py-1 bg-green-100 rounded-full">
+                  <Text className="text-xs font-bold text-green-700">✓ Loaded</Text>
+                </View>
               </View>
             </View>
           )}
         </Animated.View>
 
-        {/* Extracted Text Card */}
+        {/* Text Status Indicator */}
         {currentPDF && typeof inputText === 'string' && (
-          <View className="mb-3">
+          <View className="mb-4">
             {(inputText || '').includes('Failed to extract text') || (inputText || '').includes('No text could be extracted') ? (
-              <View className="flex-row items-center p-2 rounded-lg border bg-orange-500/20 border-orange-500/30">
-                <Text className="text-sm text-orange-400">⚠️ Text extraction failed - you can edit manually</Text>
+              <View className="p-3 bg-orange-50 rounded-xl border border-orange-200">
+                <View className="flex-row items-center">
+                  <View className="justify-center items-center mr-3 w-6 h-6 bg-orange-100 rounded-full">
+                    <Ionicons name="warning-outline" size={14} color="#ea580c" />
+                  </View>
+                  <Text className="text-sm font-medium text-orange-700">Text extraction needs attention - edit manually below</Text>
+                </View>
               </View>
             ) : (
-              <View className="flex-row items-center p-2 rounded-lg border bg-green-500/20 border-green-500/30">
-                <Text className="text-sm text-green-400">✅ Text extracted successfully</Text>
+              <View className="p-3 bg-green-50 rounded-xl border border-green-200">
+                <View className="flex-row items-center">
+                  <View className="justify-center items-center mr-3 w-6 h-6 bg-green-100 rounded-full">
+                    <Ionicons name="checkmark-outline" size={14} color="#16a34a" />
+                  </View>
+                  <Text className="text-sm font-medium text-green-700">Text extracted successfully</Text>
+                </View>
               </View>
             )}
           </View>
@@ -108,55 +149,71 @@ const Speech = () => {
           <Animated.View
             entering={FadeIn}
             exiting={FadeOut}
-            className="p-6 mb-6 bg-white rounded-2xl border border-gray-100 shadow-lg"
+            className="p-5 mb-5 bg-white rounded-xl border border-gray-100 shadow-md"
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
           >
-            <View className="flex-row justify-between items-center mb-2">
+            <View className="flex-row justify-between items-center mb-4">
               <Text className="text-lg font-bold text-black">Extracted Text</Text>
-              <TouchableOpacity onPress={() => setShowText(!showText)}>
-                <Ionicons name={showText ? 'chevron-up' : 'chevron-down'} size={24} color="#2563eb" />
+              <TouchableOpacity 
+                onPress={() => setShowText(!showText)}
+                className="justify-center items-center w-8 h-8 bg-gray-100 rounded-full"
+              >
+                <Ionicons name={showText ? 'chevron-up' : 'chevron-down'} size={16} color="#374151" />
               </TouchableOpacity>
             </View>
-            <View className="flex-row items-center mb-2">
-              <View className={`px-2 py-0.5 rounded-full ${inputText.length > 4500 ? 'bg-orange-100' : 'bg-gray-100'}`}>
-                <Text className={`text-xs font-semibold ${inputText.length > 4500 ? 'text-orange-600' : 'text-gray-700'}`}>{inputText.length} chars</Text>
+            
+            <View className="flex-row items-center mb-3">
+              <View className={`px-3 py-1 rounded-full ${inputText.length > 4500 ? 'bg-orange-100' : 'bg-gray-100'}`}>
+                <Text className={`text-xs font-bold ${inputText.length > 4500 ? 'text-orange-600' : 'text-gray-700'}`}>
+                  {inputText.length} characters
+                </Text>
               </View>
               {inputText.length > 4500 && (
-                <Text className="ml-2 text-xs font-bold text-orange-600">Truncated for TTS</Text>
+                <View className="px-2 py-1 ml-2 bg-orange-50 rounded-full">
+                  <Text className="text-xs font-bold text-orange-600">Will be truncated</Text>
+                </View>
               )}
             </View>
+            
             {!showText ? (
               <TouchableOpacity onPress={() => setShowText(true)} activeOpacity={0.7}>
-                <Text className="text-base text-gray-700" numberOfLines={3}>
+                <Text className="text-base leading-6 text-gray-700" numberOfLines={3}>
                   {previewText}
-                  {isLongText && <Text className="font-bold text-blue-500"> ...more</Text>}
+                  {isLongText && <Text className="font-bold text-blue-500"> ...tap to expand</Text>}
                 </Text>
               </TouchableOpacity>
             ) : (
               <>
-                <View className="p-4 mb-2 bg-gray-50 rounded-xl">
+                <View className="p-4 mb-4 bg-gray-50 rounded-xl">
                   <TextInput
                     value={inputText}
                     onChangeText={setInputText}
                     placeholder="Edit extracted text..."
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor="#9CA3AF"
                     multiline
-                    numberOfLines={10}
+                    numberOfLines={8}
                     className="text-black text-base leading-6 min-h-[120px]"
                     textAlignVertical="top"
                   />
                 </View>
-                <View className="flex-row gap-2">
+                <View className="flex-row gap-3">
                   <TouchableOpacity
                     onPress={handleClearText}
-                    className="flex-1 py-2 bg-red-50 rounded-lg border border-red-100"
+                    className="flex-1 py-3 bg-red-50 rounded-xl border border-red-100"
                   >
-                    <Text className="text-sm font-semibold text-center text-red-600">Clear</Text>
+                    <Text className="text-sm font-bold text-center text-red-600">Clear Text</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleSaveText}
-                    className="flex-1 py-2 bg-green-50 rounded-lg border border-green-100"
+                    className="flex-1 py-3 bg-green-50 rounded-xl border border-green-100"
                   >
-                    <Text className="text-sm font-semibold text-center text-green-600">Save</Text>
+                    <Text className="text-sm font-bold text-center text-green-600">Save Changes</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -168,75 +225,121 @@ const Speech = () => {
         <Animated.View
           entering={FadeIn}
           exiting={FadeOut}
-          className="p-6 mb-6 bg-white rounded-2xl border border-gray-100 shadow-lg"
+          className="p-5 bg-white rounded-xl border border-gray-100 shadow-md"
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.08,
+            shadowRadius: 12,
+            elevation: 6,
+          }}
         >
-          <Text className="mb-4 text-lg font-bold text-black">Text to Speech</Text>
+          <Text className="mb-5 text-lg font-bold text-black">Text to Speech</Text>
+          
           {!hasAudio ? (
             <TouchableOpacity
               onPress={handleGenerateSpeech}
               disabled={isTTSLoading || !inputText.trim()}
-              className={`flex-row items-center justify-center p-4 rounded-xl ${isTTSLoading || !inputText.trim() ? 'bg-gray-100' : 'bg-blue-600'}`}
+              className={`rounded-xl overflow-hidden ${isTTSLoading || !inputText.trim() ? 'opacity-50' : ''}`}
               activeOpacity={0.85}
             >
-              <Ionicons name="play" size={24} color={isTTSLoading || !inputText.trim() ? '#94A3B8' : '#fff'} />
-              <Text className={`ml-2 text-lg font-bold ${isTTSLoading || !inputText.trim() ? 'text-gray-400' : 'text-white'}`}>
-                {isTTSLoading ? 'Generating...' : 'Generate Speech'}
-              </Text>
+              <LinearGradient
+                colors={isTTSLoading || !inputText.trim() ? ['#F3F4F6', '#F3F4F6'] : ['#3B82F6', '#2563EB']}
+                className="flex-row justify-center items-center p-4"
+              >
+                <View className="justify-center items-center mr-3 w-10 h-10 rounded-full bg-white/20">
+                  <Ionicons 
+                    name={isTTSLoading ? "hourglass-outline" : "play"} 
+                    size={20} 
+                    color={isTTSLoading || !inputText.trim() ? '#9CA3AF' : '#FFFFFF'} 
+                  />
+                </View>
+                <Text className={`text-lg font-bold ${isTTSLoading || !inputText.trim() ? 'text-gray-400' : 'text-white'}`}>
+                  {isTTSLoading ? 'Generating Speech...' : 'Generate Speech'}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
           ) : (
             <>
-              {/* Audio Player */}
-              <View className="mb-4">
+              {/* Audio Progress */}
+              <View className="p-4 mb-5 bg-gray-50 rounded-xl">
                 <Slider
-                  style={{ width: '100%', height: 40 }}
+                  style={{ width: '100%', height: 32 }}
                   minimumValue={0}
                   maximumValue={1}
                   value={duration > 0 ? currentPosition / duration : 0}
                   onSlidingComplete={handleSeekAudio}
-                  minimumTrackTintColor="#2563eb"
+                  minimumTrackTintColor="#2563EB"
                   maximumTrackTintColor="#E5E7EB"
-                  thumbTintColor="#2563eb"
+                  thumbTintColor="#2563EB"
                 />
-                <View className="flex-row justify-between">
-                  <Text className="text-xs text-gray-600">
+                <View className="flex-row justify-between mt-2">
+                  <Text className="text-sm font-medium text-gray-600">
                     {TTSService.formatTime(currentPosition)}
                   </Text>
-                  <Text className="text-xs text-gray-600">
+                  <Text className="text-sm font-medium text-gray-600">
                     {TTSService.formatTime(duration)}
                   </Text>
                 </View>
               </View>
-              <View className="flex-row gap-4 justify-center items-center">
+
+              {/* Audio Controls */}
+              <View className="flex-row gap-4 justify-center items-center mb-4">
                 <TouchableOpacity
                   onPress={handleStopAudio}
                   disabled={!isPlaying && !isPaused}
-                  className={`p-3 rounded-full ${!isPlaying && !isPaused ? 'bg-gray-100' : 'bg-red-50'}`}
+                  className={`w-12 h-12 rounded-xl items-center justify-center ${
+                    !isPlaying && !isPaused ? 'bg-gray-100' : 'bg-red-50'
+                  }`}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="stop" size={28} color={!isPlaying && !isPaused ? '#94A3B8' : '#ef4444'} />
+                  <Ionicons 
+                    name="stop" 
+                    size={20} 
+                    color={!isPlaying && !isPaused ? '#9CA3AF' : '#EF4444'} 
+                  />
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   onPress={isPlaying ? handlePauseAudio : handlePlayAudio}
-                  className="p-4 bg-blue-600 rounded-full"
+                  className="justify-center items-center w-16 h-16 bg-blue-500 rounded-2xl shadow-lg"
+                  style={{
+                    shadowColor: "#2563EB",
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 8,
+                  }}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#fff" />
+                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={24} color="#FFFFFF" />
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   onPress={handleGenerateSpeech}
                   disabled={isTTSLoading}
-                  className={`p-3 rounded-full ${isTTSLoading ? 'bg-gray-100' : 'bg-green-50'}`}
+                  className={`w-12 h-12 rounded-xl items-center justify-center ${
+                    isTTSLoading ? 'bg-gray-100' : 'bg-green-50'
+                  }`}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="refresh" size={28} color={isTTSLoading ? '#94A3B8' : '#22c55e'} />
+                  <Ionicons 
+                    name="refresh" 
+                    size={20} 
+                    color={isTTSLoading ? '#9CA3AF' : '#22C55E'} 
+                  />
                 </TouchableOpacity>
               </View>
-              <Text className="mt-4 text-sm text-center text-gray-600">
-                {isTTSLoading ? 'Generating speech...' :
-                  isPlaying ? 'Playing audio...' :
-                  isPaused ? 'Paused' :
-                  'Ready to play'}
-              </Text>
+
+              {/* Status Text */}
+              <View className="p-3 bg-gray-50 rounded-xl">
+                <Text className="text-sm font-medium text-center text-gray-700">
+                  {isTTSLoading ? 'Generating new speech...' :
+                    isPlaying ? 'Playing audio' :
+                    isPaused ? 'Audio paused' :
+                    'Audio ready to play'}
+                </Text>
+              </View>
             </>
           )}
         </Animated.View>

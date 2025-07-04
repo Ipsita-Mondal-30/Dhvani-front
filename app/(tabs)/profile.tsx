@@ -11,7 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAppStore } from "@/store/useAppStore";
 import { PDFService } from "@/services/pdfService";
 
-function Profile() {
+const Profile = () => {
   const { pdfFiles, clearAll } = useAppStore();
 
   const handleClearAllData = () => {
@@ -58,8 +58,8 @@ function Profile() {
 
         {/* App Info */}
         <View className="p-6 mb-6 rounded-xl border bg-slate-800/30 border-slate-700/50">
-          <Text className="text-2xl font-bold text-white mb-2">📱 Dhvani</Text>
-          <Text className="text-slate-300 mb-4">
+          <Text className="mb-2 text-2xl font-bold text-white">📱 Dhvani</Text>
+          <Text className="mb-4 text-slate-300">
             Voice for Everyone - Your PDF to Text companion
           </Text>
           <Text className="text-sm text-slate-400">Version 1.0.0</Text>
@@ -67,21 +67,21 @@ function Profile() {
 
         {/* Storage Statistics */}
         <View className="p-4 mb-6 rounded-xl border bg-slate-800/30 border-slate-700/50">
-          <Text className="text-lg font-bold text-white mb-4">📊 Storage</Text>
+          <Text className="mb-4 text-lg font-bold text-white">📊 Storage</Text>
           <View className="space-y-3">
             <View className="flex-row justify-between">
               <Text className="text-slate-300">Total PDF Files</Text>
-              <Text className="text-white font-semibold">{pdfFiles.length}</Text>
+              <Text className="font-semibold text-white">{pdfFiles.length}</Text>
             </View>
             <View className="flex-row justify-between">
               <Text className="text-slate-300">Storage Used</Text>
-              <Text className="text-white font-semibold">
+              <Text className="font-semibold text-white">
                 {PDFService.formatFileSize(totalSize)}
               </Text>
             </View>
             <View className="flex-row justify-between">
               <Text className="text-slate-300">Total Characters</Text>
-              <Text className="text-white font-semibold">
+              <Text className="font-semibold text-white">
                 {pdfFiles.reduce((sum, file) => sum + file.extractedText.length, 0).toLocaleString()}
               </Text>
             </View>
@@ -90,8 +90,8 @@ function Profile() {
 
         {/* About */}
         <View className="p-4 mb-6 rounded-xl border bg-slate-800/30 border-slate-700/50">
-          <Text className="text-lg font-bold text-white mb-4">ℹ️ About</Text>
-          <Text className="text-slate-300 leading-6">
+          <Text className="mb-4 text-lg font-bold text-white">ℹ️ About</Text>
+          <Text className="leading-6 text-slate-300">
             Dhvani helps you extract text from PDF files and manage your documents. 
             Upload PDFs, extract text content, and edit it as needed. All data is 
             stored locally on your device for privacy.
@@ -100,7 +100,7 @@ function Profile() {
 
         {/* Features */}
         <View className="p-4 mb-6 rounded-xl border bg-slate-800/30 border-slate-700/50">
-          <Text className="text-lg font-bold text-white mb-4">✨ Features</Text>
+          <Text className="mb-4 text-lg font-bold text-white">✨ Features</Text>
           <View className="space-y-2">
             <Text className="text-slate-300">• PDF file upload and processing</Text>
             <Text className="text-slate-300">• Automatic text extraction</Text>
@@ -112,15 +112,15 @@ function Profile() {
 
         {/* Danger Zone */}
         <View className="p-4 mb-6 rounded-xl border bg-red-500/20 border-red-500/30">
-          <Text className="text-lg font-bold text-red-400 mb-4">⚠️ Danger Zone</Text>
-          <Text className="text-red-300 mb-4">
+          <Text className="mb-4 text-lg font-bold text-red-400">⚠️ Danger Zone</Text>
+          <Text className="mb-4 text-red-300">
             This action will permanently delete all your PDF files and extracted text.
           </Text>
           <TouchableOpacity
             onPress={handleClearAllData}
-            className="bg-red-500 rounded-lg py-3 px-4"
+            className="px-4 py-3 bg-red-500 rounded-lg"
           >
-            <Text className="text-center font-bold text-white">
+            <Text className="font-bold text-center text-white">
               Clear All Data
             </Text>
           </TouchableOpacity>
@@ -128,7 +128,7 @@ function Profile() {
 
         {/* Footer */}
         <View className="items-center py-6">
-          <Text className="text-slate-500 text-sm">
+          <Text className="text-sm text-slate-500">
             Made with ❤️ for accessibility
           </Text>
         </View>
