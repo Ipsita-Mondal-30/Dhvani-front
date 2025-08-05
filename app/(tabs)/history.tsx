@@ -12,7 +12,19 @@ import { useAppStore } from "@/store/useAppStore";
 import { PDFService } from "@/services/pdfService";
 
 const History = () => {
-  const { pdfFiles, setCurrentPDF, removePDFFile } = useAppStore();
+  const { pdfFiles, setCurrentPDF, removePDFFile, hasHydrated } = useAppStore();
+
+  // Don't render until store is hydrated
+  if (!hasHydrated) {
+    return (
+      <LinearGradient
+        colors={["#667eea", "#764ba2"]}
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+      >
+        <Text style={{ color: 'white', fontSize: 18 }}>Loading...</Text>
+      </LinearGradient>
+    );
+  }
 
   const handleSelectPDF = (pdf: any) => {
     setCurrentPDF(pdf);
