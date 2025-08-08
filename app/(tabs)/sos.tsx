@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { SOSService, SOSLog } from '@/services/sosService';
+import * as Linking from 'expo-linking';
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,6 +21,7 @@ const SOSScreen = () => {
   const [isSending, setIsSending] = useState(false);
   const [sosHistory, setSOSHistory] = useState<SOSLog[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [lastEmergencyMessage, setLastEmergencyMessage] = useState<string>('');
 
   useEffect(() => {
     loadSOSHistory();
@@ -83,14 +85,30 @@ const SOSScreen = () => {
       const result = await SOSService.sendSOS();
       
       if (result.success) {
+        // Store the emergency message for display
+        const emergencyMsg = result.emergencyMessage || 'Emergency SOS sent with location.';
+        setLastEmergencyMessage(emergencyMsg);
+        
         Alert.alert(
           "✅ SOS Sent Successfully",
           result.message,
-          [{ text: "OK" }]
+          [
+            { text: "OK" },
+            { text: "View Message", onPress: () => showEmergencyMessage(emergencyMsg) }
+          ]
         );
         
-        // Voice confirmation
-        Speech.speak("SOS sent successfully. Emergency contacts have been notified.", {
+        // Voice confirmation with specific details
+        let voiceMessage = "SOS sent successfully.";
+        if (result.message.includes('911') || result.message.includes('112')) {
+          voiceMessage += " Emergency services have been contacted automatically.";
+        } else if (result.message.includes('Emergency Call')) {
+          voiceMessage += " Emergency call initiated.";
+        } else {
+          voiceMessage += " Emergency contacts have been notified.";
+        }
+        
+        Speech.speak(voiceMessage, {
           language: 'en',
           pitch: 1.0,
           rate: 0.8,
@@ -101,7 +119,8 @@ const SOSScreen = () => {
           result.message,
           [
             { text: "OK" },
-            { text: "Try Again", onPress: sendSOS }
+            { text: "Try Again", onPress: sendSOS },
+            { text: "Call 911", onPress: () => callEmergencyManually() }
           ]
         );
         
@@ -147,16 +166,82 @@ const SOSScreen = () => {
     }
   };
 
-  const openLocationInMaps = (latitude: number, longitude: number) => {
+  const openLocationInMaps = async (latitude: number, longitude: number) => {
     const url = `https://maps.google.com/?q=${latitude},${longitude}`;
+    
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+        Speech.speak(`Opening location ${latitude.toFixed(4)}, ${longitude.toFixed(4)} in maps.`, {
+          language: 'en',
+          pitch: 1.0,
+          rate: 0.8,
+        });
+      } else {
+        Alert.alert(
+          "Cannot Open Maps",
+          `Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n\nCopy this link: ${url}`,
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Location",
+        `Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n\nMap URL: ${url}`,
+        [{ text: "OK" }]
+      );
+    }
+  };
+
+  const showEmergencyMessage = (message: string) => {
     Alert.alert(
-      "Location",
-      `Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+      "📱 Emergency Message Sent",
+      message,
       [
-        { text: "Cancel" },
-        { text: "Open in Maps", onPress: () => console.log('Open URL:', url) }
+        { text: "OK" },
+        { text: "Copy Message", onPress: () => {
+          // In a real app, you'd use Clipboard API
+          console.log('Message copied:', message);
+        }}
       ]
     );
+    
+    // Read the message aloud
+    Speech.speak(`Emergency message sent: ${message}`, {
+      language: 'en',
+      pitch: 1.0,
+      rate: 0.7,
+    });
+  };
+
+  const callEmergencyManually = async () => {
+    try {
+      const emergencyNumber = '911'; // Default to 911
+      const phoneUrl = `tel:${emergencyNumber}`;
+      
+      const canOpen = await Linking.canOpenURL(phoneUrl);
+      if (canOpen) {
+        await Linking.openURL(phoneUrl);
+        Speech.speak(`Calling emergency services at ${emergencyNumber}.`, {
+          language: 'en',
+          pitch: 1.0,
+          rate: 0.8,
+        });
+      } else {
+        Alert.alert(
+          "Cannot Make Call",
+          `Please dial ${emergencyNumber} manually for emergency services.`,
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Call Failed",
+        "Please dial 911 manually for emergency services.",
+        [{ text: "OK" }]
+      );
+    }
   };
 
   return (
@@ -178,6 +263,23 @@ const SOSScreen = () => {
       </LinearGradient>
 
       <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+        {/* Last Emergency Message Display */}
+        {lastEmergencyMessage && (
+          <View className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+            <View className="flex-row items-center mb-2">
+              <Ionicons name="mail-outline" size={20} color="#3B82F6" />
+              <Text className="ml-2 font-semibold text-blue-800">Last Emergency Message</Text>
+            </View>
+            <Text className="text-sm text-blue-700 leading-5">{lastEmergencyMessage}</Text>
+            <TouchableOpacity
+              onPress={() => showEmergencyMessage(lastEmergencyMessage)}
+              className="mt-2 px-3 py-1 bg-blue-100 rounded-full self-start"
+            >
+              <Text className="text-xs font-medium text-blue-600">View Full Message</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Emergency Button */}
         <View className="items-center mb-8">
           <TouchableOpacity
@@ -211,8 +313,23 @@ const SOSScreen = () => {
           </TouchableOpacity>
           
           <Text className="text-gray-600 text-center mt-4 px-4">
-            Tap the button above to send your current location to emergency contacts via SMS
+            Tap the button above to send your current location to emergency contacts via SMS. If no contacts are configured, emergency services will be called automatically.
           </Text>
+        </View>
+
+        {/* Manual Emergency Call Button */}
+        <View className="items-center mb-6">
+          <TouchableOpacity
+            onPress={callEmergencyManually}
+            className="px-6 py-3 bg-red-100 border-2 border-red-300 rounded-xl"
+            accessibilityRole="button"
+            accessibilityLabel="Call emergency services manually"
+          >
+            <View className="flex-row items-center">
+              <Ionicons name="call" size={18} color="#DC2626" />
+              <Text className="ml-2 font-semibold text-red-700">Call 911 Manually</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Instructions */}
