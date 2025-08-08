@@ -1,8 +1,8 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
+import * as pdfjsLib from 'pdfjs-dist';
 
-// Import pdfjs-dist
-const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+import { BackendService } from './backendService';
 
 export interface PickedFile {
   name: string;
