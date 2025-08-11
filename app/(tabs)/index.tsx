@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +10,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from '@expo/vector-icons';
+import * as Speech from 'expo-speech';
 
 import { icons } from "@/constants/icons";
 
@@ -27,6 +30,7 @@ const FeatureCard = ({ icon, title, description, onPress }: any) => (
     }}
     accessibilityRole="button"
     accessibilityLabel={`${title}: ${description}`}
+    accessibilityHint="Double tap to navigate to this feature"
   >
     <View className="flex-row items-center mb-3">
       <View className="justify-center items-center mr-4 w-12 h-12 bg-blue-50 rounded-xl">
@@ -47,6 +51,41 @@ const FeatureCard = ({ icon, title, description, onPress }: any) => (
 
 const Index = () => {
   const router = useRouter();
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const welcomeMessage = "Welcome to Dhvani, your accessibility-first text to speech application. Tap to access features and start converting text, PDFs, and documents into natural-sounding speech. Use the replay button to hear this message again.";
+
+  const speakWelcomeMessage = async () => {
+    try {
+      // Stop any current speech
+      Speech.stop();
+      setIsSpeaking(true);
+      
+      Speech.speak(welcomeMessage, {
+        language: 'en',
+        pitch: 1.0,
+        rate: 0.8,
+        onDone: () => setIsSpeaking(false),
+        onStopped: () => setIsSpeaking(false),
+        onError: () => setIsSpeaking(false),
+      });
+    } catch (error) {
+      console.error('💥 [HomeScreen] Failed to speak welcome message:', error);
+      setIsSpeaking(false);
+    }
+  };
+
+  useEffect(() => {
+    // Voice onboarding on component mount
+    const initializeWelcome = async () => {
+      // Wait a moment for the screen to fully load
+      setTimeout(() => {
+        speakWelcomeMessage();
+      }, 1500);
+    };
+
+    initializeWelcome();
+  }, []);
 
   const features = [
     {
@@ -115,6 +154,34 @@ const Index = () => {
           <Text className="px-4 text-sm font-medium leading-5 text-center text-gray-600">
             Transform any text into clear, natural speech. Dhvani helps make content accessible to everyone, everywhere.
           </Text>
+          
+          {/* Voice Replay Button */}
+          <TouchableOpacity
+            onPress={speakWelcomeMessage}
+            disabled={isSpeaking}
+            className={`mt-4 px-4 py-2 rounded-full border-2 ${isSpeaking ? 'bg-gray-100 border-gray-300' : 'bg-blue-50 border-blue-200'}`}
+            style={{
+              shadowColor: "#3B82F6",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 2,
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Replay welcome message"
+            accessibilityHint="Double tap to hear the welcome message again"
+          >
+            <View className="flex-row items-center justify-center">
+              <Ionicons 
+                name={isSpeaking ? "volume-high" : "volume-medium-outline"} 
+                size={16} 
+                color={isSpeaking ? "#9CA3AF" : "#3B82F6"} 
+              />
+              <Text className={`ml-2 text-sm font-semibold ${isSpeaking ? 'text-gray-500' : 'text-blue-600'}`}>
+                {isSpeaking ? 'Speaking...' : 'Replay Welcome'}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Main CTA Button */}

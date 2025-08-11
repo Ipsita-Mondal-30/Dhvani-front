@@ -122,7 +122,7 @@ const Speech = () => {
         {/* Text Status Indicator */}
         {currentPDF && typeof inputText === 'string' && (
           <View className="mb-4">
-            {(inputText || '').includes('Failed to extract text') || (inputText || '').includes('No text could be extracted') ? (
+            {(inputText && typeof inputText === 'string' && (inputText.includes('Failed to extract text') || inputText.includes('No text could be extracted'))) ? (
               <View className="p-3 bg-orange-50 rounded-xl border border-orange-200">
                 <View className="flex-row items-center">
                   <View className="justify-center items-center mr-3 w-6 h-6 bg-orange-100 rounded-full">

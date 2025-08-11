@@ -20,7 +20,7 @@ export const useSpeech = () => {
   const [hasAudio, setHasAudio] = useState(false);
   
   // Timer for updating playback position
-  const positionUpdateInterval = useRef<NodeJS.Timeout | null>(null);
+  const positionUpdateInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   
   const {
     currentPDF,
@@ -28,6 +28,7 @@ export const useSpeech = () => {
     isUploading,
     error,
     updatePDFText,
+    hasHydrated,
     setCurrentPDF,
     setError,
     uploadPDFToBackend,

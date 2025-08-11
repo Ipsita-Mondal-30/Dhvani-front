@@ -12,7 +12,19 @@ import { useAppStore } from "@/store/useAppStore";
 import { PDFService } from "@/services/pdfService";
 
 const Profile = () => {
-  const { pdfFiles, clearAll } = useAppStore();
+  const { pdfFiles, clearAll, hasHydrated } = useAppStore();
+
+  // Don't render until store is hydrated
+  if (!hasHydrated) {
+    return (
+      <LinearGradient
+        colors={["#667eea", "#764ba2"]}
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+      >
+        <Text style={{ color: 'white', fontSize: 18 }}>Loading...</Text>
+      </LinearGradient>
+    );
+  }
 
   const handleClearAllData = () => {
     Alert.alert(

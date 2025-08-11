@@ -27,6 +27,9 @@ interface AppState {
   isUploading: boolean;
   error: string | null;
   
+  // Hydration state
+  hasHydrated: boolean;
+  
   // Actions
   addPDFFile: (file: PDFFile) => void;
   updatePDFText: (id: string, text: string) => void;
@@ -35,6 +38,7 @@ interface AppState {
   setLoading: (loading: boolean) => void;
   setUploading: (uploading: boolean) => void;
   setError: (error: string | null) => void;
+  setHydrated: (hasHydrated: boolean) => void;
   clearAll: () => void;
   
   // Backend actions
@@ -76,7 +80,7 @@ const reviveDates = (obj: any): any => {
   return result;
 };
 
-export const useAppStore = create<AppState>()(
+const createAppStore = () => create<AppState>()(
   persist(
     (set, get) => ({
       // Initial state
@@ -85,6 +89,7 @@ export const useAppStore = create<AppState>()(
       isLoading: false,
       isUploading: false,
       error: null,
+      hasHydrated: false,
 
       // Actions
       addPDFFile: (file) => {
@@ -133,7 +138,11 @@ export const useAppStore = create<AppState>()(
       },
 
       setError: (error) => {
-        set({ error: error || null });
+        set({ error });
+      },
+      
+      setHydrated: (hasHydrated) => {
+        set({ hasHydrated });
       },
 
       clearAll: () => {
@@ -211,6 +220,9 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'dhvani-storage',
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated?.(true);
+      },
       storage: {
         getItem: async (name) => {
           try {
@@ -251,4 +263,61 @@ export const useAppStore = create<AppState>()(
       }),
     }
   )
-); 
+);
+
+// Create the store instance
+const appStore = createAppStore();
+
+// Export the store with error handling
+export const useAppStore = () => {
+  try {
+    const store = appStore();
+    // Ensure store is properly initialized
+    if (!store) {
+      console.warn('⚠️ [Store] Store not initialized, returning default state');
+      return {
+        pdfFiles: [],
+        currentPDF: null,
+        isLoading: false,
+        isUploading: false,
+        error: null,
+        hasHydrated: false,
+        addPDFFile: () => {},
+        updatePDFText: () => {},
+        removePDFFile: () => {},
+        setCurrentPDF: () => {},
+        setLoading: () => {},
+        setUploading: () => {},
+        setError: () => {},
+        setHydrated: () => {},
+        clearAll: () => {},
+        uploadPDFToBackend: async () => ({} as PDFFile),
+        loadDocumentsFromBackend: async () => {},
+        deleteDocumentFromBackend: async () => {},
+      };
+    }
+    return store;
+  } catch (error) {
+    console.error('💥 [Store] Error accessing store:', error);
+    return {
+      pdfFiles: [],
+      currentPDF: null,
+      isLoading: false,
+      isUploading: false,
+      error: null,
+      hasHydrated: false,
+      addPDFFile: () => {},
+      updatePDFText: () => {},
+      removePDFFile: () => {},
+      setCurrentPDF: () => {},
+      setLoading: () => {},
+      setUploading: () => {},
+      setError: () => {},
+      setHydrated: () => {},
+      clearAll: () => {},
+      uploadPDFToBackend: async () => ({} as PDFFile),
+      loadDocumentsFromBackend: async () => {},
+      deleteDocumentFromBackend: async () => {},
+    };
+  }
+};

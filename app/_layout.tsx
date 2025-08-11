@@ -3,15 +3,17 @@ import { useEffect } from "react";
 import { StatusBar } from "react-native";
 import "./globals.css";
 
-import { useAppStore } from "@/store/useAppStore";
+import { useSimpleAppStore } from "@/store/simpleStore";
 
 export default function RootLayout() {
-  const { setError } = useAppStore();
+  const { setError, hasHydrated } = useSimpleAppStore();
 
-  // Clear any startup errors
+  // Clear any startup errors only after store is hydrated
   useEffect(() => {
-    setError(null);
-  }, []);
+    if (hasHydrated && setError) {
+      setError(null);
+    }
+  }, [hasHydrated, setError]);
 
   return (
     <>
