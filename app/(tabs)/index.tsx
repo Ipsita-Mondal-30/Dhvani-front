@@ -5,20 +5,22 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  Dimensions,
   StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
+import { useTranslation } from 'react-i18next';
 
 import { icons } from "@/constants/icons";
+import { getSpeechLanguageCode, changeLanguage } from "@/src/locales/i18n";
+import SimpleHamburgerMenu from "@/src/components/SimpleHamburgerMenu";
+import { useTheme } from "@/src/contexts/ThemeContext";
 
-const { width, height } = Dimensions.get('window');
 
 const FeatureCard = ({ icon, title, description, onPress }: any) => (
-  <TouchableOpacity 
+  <TouchableOpacity
     onPress={onPress}
     className="p-5 mb-4 bg-white rounded-xl border border-gray-100 shadow-md"
     style={{
@@ -39,7 +41,7 @@ const FeatureCard = ({ icon, title, description, onPress }: any) => (
       <Text className="flex-1 text-lg font-bold text-gray-900">{title}</Text>
     </View>
     <Text className="text-sm font-medium leading-5 text-gray-600">{description}</Text>
-    
+
     {/* Subtle arrow indicator */}
     <View className="flex-row justify-end mt-3">
       <View className="justify-center items-center w-6 h-6 bg-gray-100 rounded-full">
@@ -51,23 +53,51 @@ const FeatureCard = ({ icon, title, description, onPress }: any) => (
 
 const Index = () => {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
+  const { colors, isDark } = useTheme();
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const welcomeMessage = "Welcome to Dhvani, your accessibility-first text to speech application. Tap to access features and start converting text, PDFs, and documents into natural-sounding speech. Use the replay button to hear this message again.";
+  const welcomeMessage = t('home.description');
 
   const speakWelcomeMessage = async () => {
     try {
       // Stop any current speech
       Speech.stop();
       setIsSpeaking(true);
-      
+
+      const languageCode = getSpeechLanguageCode(i18n.language);
+      console.log(`🎤 [HomeScreen] Speaking in language: ${languageCode}`);
+      console.log(`🎤 [HomeScreen] Message: ${welcomeMessage}`);
+
       Speech.speak(welcomeMessage, {
-        language: 'en',
+        language: languageCode,
         pitch: 1.0,
         rate: 0.8,
-        onDone: () => setIsSpeaking(false),
-        onStopped: () => setIsSpeaking(false),
-        onError: () => setIsSpeaking(false),
+        onDone: () => {
+          console.log('✅ [HomeScreen] Speech completed');
+          setIsSpeaking(false);
+        },
+        onStopped: () => {
+          console.log('⏹️ [HomeScreen] Speech stopped');
+          setIsSpeaking(false);
+        },
+        onError: (error) => {
+          console.error('❌ [HomeScreen] Speech error:', error);
+          console.log('🔄 [HomeScreen] Trying fallback to English');
+          setIsSpeaking(false);
+
+          // Always fallback to English without language specification
+          Speech.speak(welcomeMessage, {
+            pitch: 1.0,
+            rate: 0.8,
+            onDone: () => setIsSpeaking(false),
+            onStopped: () => setIsSpeaking(false),
+            onError: (fallbackError) => {
+              console.error('❌ [HomeScreen] Fallback speech also failed:', fallbackError);
+              setIsSpeaking(false);
+            },
+          });
+        },
       });
     } catch (error) {
       console.error('💥 [HomeScreen] Failed to speak welcome message:', error);
@@ -90,33 +120,36 @@ const Index = () => {
   const features = [
     {
       icon: icons.play,
-      title: "Text to Speech",
-      description: "Convert any text, PDF, or document into natural-sounding speech. Perfect for reading books, articles, and documents hands-free.",
+      title: t('speech.title'),
+      description: t('speech.generateSpeech'),
       onPress: () => router.push("/speech")
     },
     {
-      icon: icons.save,
-      title: "Audio History",
-      description: "Access your previously converted audio files and saved documents. Never lose track of important content.",
-      onPress: () => router.push("/history")
+      icon: icons.person, // Using person icon for SOS
+      title: t('sos.title'),
+      description: t('sos.subtitle'),
+      onPress: () => router.push("/sos")
     },
     {
-      icon: icons.person,
-      title: "Personalized Experience",
-      description: "Customize voice settings, playback speed, and accessibility preferences to match your needs.",
-      onPress: () => router.push("/profile")
+      icon: icons.save, // Using save icon for Currency
+      title: t('currency.title'),
+      description: t('currency.subtitle'),
+      onPress: () => router.push("/currency")
     }
   ];
 
   return (
-    <View className="flex-1 bg-gray-50">
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-      
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
+
       {/* Subtle gradient background */}
       <LinearGradient
-        colors={['#FFFFFF', '#F8FAFC', '#F1F5F9']}
+        colors={isDark ? ['#0F172A', '#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC', '#F1F5F9']}
         className="absolute inset-0"
       />
+
+      {/* Simple Hamburger Menu */}
+      <SimpleHamburgerMenu />
 
       <ScrollView
         className="flex-1"
@@ -126,7 +159,7 @@ const Index = () => {
         {/* Header Section */}
         <View className="items-center px-6 pt-16 pb-8">
           {/* Logo with enhanced styling */}
-          <View 
+          <View
             className="justify-center items-center mb-6 w-20 h-20 bg-blue-500 rounded-2xl shadow-lg"
             style={{
               shadowColor: "#2563EB",
@@ -138,23 +171,23 @@ const Index = () => {
           >
             <Image source={icons.logo} className="w-12 h-12" tintColor="#FFFFFF" />
           </View>
-          
+
           {/* App name with modern typography */}
-          <Text 
+          <Text
             className="mb-2 text-3xl font-black tracking-tight text-center text-black"
             accessibilityRole="header"
           >
-            Dhvani
+            {t('home.title')}
           </Text>
-          
+
           <Text className="mb-4 text-base font-bold tracking-wide text-center text-blue-500">
-            VOICE FOR EVERYONE
+            {t('home.subtitle').toUpperCase()}
           </Text>
-          
+
           <Text className="px-4 text-sm font-medium leading-5 text-center text-gray-600">
-            Transform any text into clear, natural speech. Dhvani helps make content accessible to everyone, everywhere.
+            {t('home.description')}
           </Text>
-          
+
           {/* Voice Replay Button */}
           <TouchableOpacity
             onPress={speakWelcomeMessage}
@@ -172,13 +205,13 @@ const Index = () => {
             accessibilityHint="Double tap to hear the welcome message again"
           >
             <View className="flex-row items-center justify-center">
-              <Ionicons 
-                name={isSpeaking ? "volume-high" : "volume-medium-outline"} 
-                size={16} 
-                color={isSpeaking ? "#9CA3AF" : "#3B82F6"} 
+              <Ionicons
+                name={isSpeaking ? "volume-high" : "volume-medium-outline"}
+                size={16}
+                color={isSpeaking ? "#9CA3AF" : "#3B82F6"}
               />
               <Text className={`ml-2 text-sm font-semibold ${isSpeaking ? 'text-gray-500' : 'text-blue-600'}`}>
-                {isSpeaking ? 'Speaking...' : 'Replay Welcome'}
+                {isSpeaking ? t('common.loading') : 'Replay Welcome'}
               </Text>
             </View>
           </TouchableOpacity>
@@ -209,24 +242,76 @@ const Index = () => {
                 <View className="justify-center items-center mr-3 w-8 h-8 rounded-full bg-white/20">
                   <Image source={icons.play} className="w-4 h-4" tintColor="#FFFFFF" />
                 </View>
-                <Text className="text-lg font-bold text-white">Start Converting</Text>
+                <Text className="text-lg font-bold text-white">{t('speech.generateSpeech')}</Text>
               </View>
               <Text className="text-sm font-medium text-center text-blue-100">
-                Begin your text-to-speech journey
+                {t('home.welcome')}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
+        {/* Language Switcher */}
+        <View className="px-6 mb-8">
+          <View
+            className="p-4 bg-white rounded-xl border border-gray-100 shadow-md"
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
+          >
+            <Text className="mb-3 text-lg font-bold text-center text-black">
+              🌐 {t('language.selectLanguage')}
+            </Text>
+            <Text className="mb-3 text-sm text-center text-gray-600">
+              {t('language.currentLanguage')}: {i18n.language.toUpperCase()}
+            </Text>
+            <View className="flex-row justify-around">
+              <TouchableOpacity
+                onPress={async () => {
+                  await changeLanguage('en');
+                  speakWelcomeMessage(); // Replay welcome in new language
+                }}
+                className={`px-4 py-2 rounded-lg ${i18n.language === 'en' ? 'bg-blue-500' : 'bg-gray-200'
+                  }`}
+              >
+                <Text className={`font-semibold ${i18n.language === 'en' ? 'text-white' : 'text-gray-700'
+                  }`}>
+                  English
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={async () => {
+                  await changeLanguage('hi');
+                  speakWelcomeMessage(); // Replay welcome in new language
+                }}
+                className={`px-4 py-2 rounded-lg ${i18n.language === 'hi' ? 'bg-blue-500' : 'bg-gray-200'
+                  }`}
+              >
+                <Text className={`font-semibold ${i18n.language === 'hi' ? 'text-white' : 'text-gray-700'
+                  }`}>
+                  हिंदी
+                </Text>
+              </TouchableOpacity>
+
+
+            </View>
+          </View>
+        </View>
+
         {/* Features Section */}
         <View className="px-6 mb-8">
-          <Text 
+          <Text
             className="mb-5 text-xl font-bold text-center text-black"
             accessibilityRole="header"
           >
-            Features
+            {t('profile.features')}
           </Text>
-          
+
           {features.map((feature, index) => (
             <FeatureCard key={index} {...feature} />
           ))}
@@ -234,7 +319,7 @@ const Index = () => {
 
         {/* How it Works Section */}
         <View className="px-6">
-          <View 
+          <View
             className="p-6 bg-white rounded-xl border border-gray-100 shadow-md"
             style={{
               shadowColor: "#000",
@@ -247,10 +332,10 @@ const Index = () => {
             <Text className="mb-6 text-xl font-bold text-center text-black">
               How it Works
             </Text>
-            
+
             <View className="space-y-5">
               <View className="flex-row items-start">
-                <View 
+                <View
                   className="justify-center items-center mt-1 mr-4 w-8 h-8 bg-blue-500 rounded-lg shadow-md"
                   style={{
                     shadowColor: "#2563EB",
@@ -271,7 +356,7 @@ const Index = () => {
               </View>
 
               <View className="flex-row items-start">
-                <View 
+                <View
                   className="justify-center items-center mt-1 mr-4 w-8 h-8 bg-blue-500 rounded-lg shadow-md"
                   style={{
                     shadowColor: "#2563EB",
@@ -290,9 +375,9 @@ const Index = () => {
                   </Text>
                 </View>
               </View>
-              
+
               <View className="flex-row items-start">
-                <View 
+                <View
                   className="justify-center items-center mt-1 mr-4 w-8 h-8 bg-blue-500 rounded-lg shadow-md"
                   style={{
                     shadowColor: "#2563EB",

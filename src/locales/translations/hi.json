@@ -1,0 +1,113 @@
+{
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "cancel": "रद्द करें",
+    "ok": "ठीक है",
+    "save": "सहेजें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "back": "वापस",
+    "next": "अगला",
+    "done": "पूर्ण"
+  },
+  "navigation": {
+    "home": "होम",
+    "speech": "भाषण",
+    "settings": "सेटिंग्स",
+    "history": "इतिहास",
+    "sos": "एसओएस",
+    "currency": "मुद्रा",
+    "profile": "प्रोफ़ाइल"
+  },
+  "home": {
+    "title": "ध्वनि",
+    "subtitle": "सभी के लिए आवाज़",
+    "welcome": "ध्वनि में आपका स्वागत है",
+    "description": "आवाज़ पहुंच सुविधाओं के साथ आपका PDF से टेक्स्ट साथी"
+  },
+  "speech": {
+    "title": "भाषण",
+    "uploadPdf": "PDF अपलोड करें",
+    "generateSpeech": "भाषण उत्पन्न करें",
+    "editText": "निकाले गए टेक्स्ट को संपादित करें...",
+    "noTextExtracted": "कोई टेक्स्ट निकाला नहीं जा सका",
+    "textExtracted": "टेक्स्ट सफलतापूर्वक निकाला गया",
+    "characters": "अक्षर",
+    "willBeTruncated": "काटा जाएगा"
+  },
+  "settings": {
+    "title": "सेटिंग्स",
+    "subtitle": "अपने ऐप अनुभव को अनुकूलित करें",
+    "language": "भाषा",
+    "appSettings": "ऐप सेटिंग्स",
+    "darkMode": "डार्क मोड",
+    "useDarkTheme": "डार्क थीम का उपयोग करें",
+    "notifications": "सूचनाएं",
+    "enableNotifications": "ऐप सूचनाएं सक्षम करें",
+    "voiceFeedback": "आवाज़ फीडबैक",
+    "enableVoiceResponses": "आवाज़ प्रतिक्रियाएं सक्षम करें",
+    "accessibility": "पहुंच",
+    "accessibilityDescription": "यह ऐप पहुंच को ध्यान में रखकर डिज़ाइन किया गया है। सभी सुविधाएं स्क्रीन रीडर और आवाज़ नेवीगेशन का समर्थन करती हैं।",
+    "about": "के बारे में",
+    "version": "संस्करण",
+    "build": "बिल्ड"
+  },
+  "history": {
+    "title": "PDF इतिहास",
+    "subtitle": "आपकी अपलोड की गई PDF फाइलें और निकाला गया टेक्स्ट",
+    "storageInfo": "स्टोरेज जानकारी",
+    "totalPdfs": "कुल PDF",
+    "totalSize": "कुल आकार",
+    "totalCharacters": "कुल अक्षर",
+    "noPdfsYet": "अभी तक कोई PDF नहीं",
+    "noPdfsDescription": "शुरू करने के लिए भाषण टैब में एक PDF फाइल अपलोड करें",
+    "select": "चुनें",
+    "charactersExtracted": "अक्षर निकाले गए"
+  },
+  "profile": {
+    "title": "प्रोफ़ाइल",
+    "subtitle": "ऐप सेटिंग्स और डेटा प्रबंधन",
+    "appInfo": "ध्वनि",
+    "appDescription": "सभी के लिए आवाज़ - आपका PDF से टेक्स्ट साथी",
+    "storage": "स्टोरेज",
+    "storageUsed": "उपयोग किया गया स्टोरेज",
+    "features": "सुविधाएं",
+    "featuresList": [
+      "PDF फाइल अपलोड और प्रसंस्करण",
+      "स्वचालित टेक्स्ट निष्कर्षण",
+      "टेक्स्ट संपादन और सहेजना",
+      "AsyncStorage के साथ स्थानीय स्टोरेज",
+      "सरल और सुलभ इंटरफेस"
+    ],
+    "dangerZone": "खतरा क्षेत्र",
+    "dangerDescription": "यह क्रिया आपकी सभी PDF फाइलों और निकाले गए टेक्स्ट को स्थायी रूप से हटा देगी।",
+    "clearAllData": "सभी डेटा साफ़ करें",
+    "footerText": "पहुंच के लिए ❤️ के साथ बनाया गया"
+  },
+  "sos": {
+    "title": "आपातकालीन SOS",
+    "subtitle": "आपातकालीन सेवाओं तक त्वरित पहुंच",
+    "sendSos": "SOS भेजें",
+    "sosHistory": "SOS इतिहास",
+    "emergencyContacts": "आपातकालीन संपर्क"
+  },
+  "currency": {
+    "title": "मुद्रा रीडर",
+    "subtitle": "कैमरा का उपयोग करके मुद्रा नोट पहचानें",
+    "scanNote": "मुद्रा नोट स्कैन करें",
+    "takePhoto": "फोटो लें",
+    "processing": "छवि प्रसंस्करण..."
+  },
+  "language": {
+    "title": "भाषा सेटिंग्स",
+    "subtitle": "अपनी पसंदीदा भाषा चुनें",
+    "english": "English",
+    "hindi": "हिंदी",
+    "bengali": "বাংলা",
+    "currentLanguage": "वर्तमान भाषा",
+    "selectLanguage": "भाषा चुनें",
+    "languageChanged": "भाषा {{language}} में बदल गई"
+  }
+}

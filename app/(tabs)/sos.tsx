@@ -13,11 +13,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { SOSService, SOSLog } from '@/services/sosService';
+import SimpleHamburgerMenu from "@/src/components/SimpleHamburgerMenu";
+import { useTranslation } from 'react-i18next';
+import { getSpeechLanguageCode } from '@/src/locales/i18n';
 import * as Linking from 'expo-linking';
 
 const { width, height } = Dimensions.get('window');
 
 const SOSScreen = () => {
+  const { t, i18n } = useTranslation();
   const [isSending, setIsSending] = useState(false);
   const [sosHistory, setSOSHistory] = useState<SOSLog[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -28,8 +32,8 @@ const SOSScreen = () => {
     
     // Voice announcement when screen loads
     setTimeout(() => {
-      Speech.speak("SOS Emergency screen. Tap the red emergency button to send your location to emergency contacts.", {
-        language: 'en',
+      Speech.speak(t('sos.subtitle'), {
+        language: getSpeechLanguageCode(i18n.language),
         pitch: 1.0,
         rate: 0.8,
       });
@@ -77,7 +81,7 @@ const SOSScreen = () => {
     try {
       // Voice feedback
       Speech.speak("Sending emergency SOS. Please wait.", {
-        language: 'en',
+        language: getSpeechLanguageCode(i18n.language),
         pitch: 1.1,
         rate: 0.9,
       });
@@ -100,16 +104,16 @@ const SOSScreen = () => {
         
         // Voice confirmation with specific details
         let voiceMessage = "SOS sent successfully.";
-        if (result.message.includes('911') || result.message.includes('112')) {
+        if (result.message && (result.message.includes('911') || result.message.includes('112'))) {
           voiceMessage += " Emergency services have been contacted automatically.";
-        } else if (result.message.includes('Emergency Call')) {
+        } else if (result.message && result.message.includes('Emergency Call')) {
           voiceMessage += " Emergency call initiated.";
         } else {
           voiceMessage += " Emergency contacts have been notified.";
         }
         
         Speech.speak(voiceMessage, {
-          language: 'en',
+          language: getSpeechLanguageCode(i18n.language),
           pitch: 1.0,
           rate: 0.8,
         });
@@ -247,6 +251,9 @@ const SOSScreen = () => {
   return (
     <View className="flex-1 bg-gray-50">
       <StatusBar barStyle="light-content" backgroundColor="#DC2626" />
+      
+      {/* Simple Hamburger Menu */}
+      <SimpleHamburgerMenu />
       
       {/* Header */}
       <LinearGradient

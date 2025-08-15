@@ -1,0 +1,113 @@
+{
+  "common": {
+    "loading": "লোড হচ্ছে...",
+    "error": "ত্রুটি",
+    "success": "সফলতা",
+    "cancel": "বাতিল",
+    "ok": "ঠিক আছে",
+    "save": "সংরক্ষণ",
+    "delete": "মুছুন",
+    "edit": "সম্পাদনা",
+    "back": "পিছনে",
+    "next": "পরবর্তী",
+    "done": "সম্পন্ন"
+  },
+  "navigation": {
+    "home": "হোম",
+    "speech": "বক্তৃতা",
+    "settings": "সেটিংস",
+    "history": "ইতিহাস",
+    "sos": "এসওএস",
+    "currency": "মুদ্রা",
+    "profile": "প্রোফাইল"
+  },
+  "home": {
+    "title": "ধ্বনি",
+    "subtitle": "সবার জন্য কণ্ঠস্বর",
+    "welcome": "ধ্বনিতে স্বাগতম",
+    "description": "ভয়েস অ্যাক্সেসিবিলিটি বৈশিষ্ট্য সহ আপনার PDF থেকে টেক্সট সহচর"
+  },
+  "speech": {
+    "title": "বক্তৃতা",
+    "uploadPdf": "PDF আপলোড করুন",
+    "generateSpeech": "বক্তৃতা তৈরি করুন",
+    "editText": "নিষ্কাশিত টেক্সট সম্পাদনা করুন...",
+    "noTextExtracted": "কোন টেক্সট নিষ্কাশন করা যায়নি",
+    "textExtracted": "টেক্সট সফলভাবে নিষ্কাশিত",
+    "characters": "অক্ষর",
+    "willBeTruncated": "কাটা হবে"
+  },
+  "settings": {
+    "title": "সেটিংস",
+    "subtitle": "আপনার অ্যাপ অভিজ্ঞতা কাস্টমাইজ করুন",
+    "language": "ভাষা",
+    "appSettings": "অ্যাপ সেটিংস",
+    "darkMode": "ডার্ক মোড",
+    "useDarkTheme": "ডার্ক থিম ব্যবহার করুন",
+    "notifications": "বিজ্ঞপ্তি",
+    "enableNotifications": "অ্যাপ বিজ্ঞপ্তি সক্ষম করুন",
+    "voiceFeedback": "ভয়েস ফিডব্যাক",
+    "enableVoiceResponses": "ভয়েস প্রতিক্রিয়া সক্ষম করুন",
+    "accessibility": "অ্যাক্সেসিবিলিটি",
+    "accessibilityDescription": "এই অ্যাপটি অ্যাক্সেসিবিলিটি মাথায় রেখে ডিজাইন করা হয়েছে। সমস্ত বৈশিষ্ট্য স্ক্রিন রিডার এবং ভয়েস নেভিগেশন সমর্থন করে।",
+    "about": "সম্পর্কে",
+    "version": "সংস্করণ",
+    "build": "বিল্ড"
+  },
+  "history": {
+    "title": "PDF ইতিহাস",
+    "subtitle": "আপনার আপলোড করা PDF ফাইল এবং নিষ্কাশিত টেক্সট",
+    "storageInfo": "স্টোরেজ তথ্য",
+    "totalPdfs": "মোট PDF",
+    "totalSize": "মোট আকার",
+    "totalCharacters": "মোট অক্ষর",
+    "noPdfsYet": "এখনও কোন PDF নেই",
+    "noPdfsDescription": "শুরু করতে বক্তৃতা ট্যাবে একটি PDF ফাইল আপলোড করুন",
+    "select": "নির্বাচন",
+    "charactersExtracted": "অক্ষর নিষ্কাশিত"
+  },
+  "profile": {
+    "title": "প্রোফাইল",
+    "subtitle": "অ্যাপ সেটিংস এবং ডেটা ব্যবস্থাপনা",
+    "appInfo": "ধ্বনি",
+    "appDescription": "সবার জন্য কণ্ঠস্বর - আপনার PDF থেকে টেক্সট সহচর",
+    "storage": "স্টোরেজ",
+    "storageUsed": "ব্যবহৃত স্টোরেজ",
+    "features": "বৈশিষ্ট্য",
+    "featuresList": [
+      "PDF ফাইল আপলোড এবং প্রক্রিয়াকরণ",
+      "স্বয়ংক্রিয় টেক্সট নিষ্কাশন",
+      "টেক্সট সম্পাদনা এবং সংরক্ষণ",
+      "AsyncStorage সহ স্থানীয় স্টোরেজ",
+      "সহজ এবং অ্যাক্সেসযোগ্য ইন্টারফেস"
+    ],
+    "dangerZone": "বিপদ অঞ্চল",
+    "dangerDescription": "এই ক্রিয়াটি আপনার সমস্ত PDF ফাইল এবং নিষ্কাশিত টেক্সট স্থায়ীভাবে মুছে দেবে।",
+    "clearAllData": "সমস্ত ডেটা সাফ করুন",
+    "footerText": "অ্যাক্সেসিবিলিটির জন্য ❤️ দিয়ে তৈরি"
+  },
+  "sos": {
+    "title": "জরুরি SOS",
+    "subtitle": "জরুরি সেবায় দ্রুত অ্যাক্সেস",
+    "sendSos": "SOS পাঠান",
+    "sosHistory": "SOS ইতিহাস",
+    "emergencyContacts": "জরুরি যোগাযোগ"
+  },
+  "currency": {
+    "title": "মুদ্রা রিডার",
+    "subtitle": "ক্যামেরা ব্যবহার করে মুদ্রার নোট চিহ্নিত করুন",
+    "scanNote": "মুদ্রার নোট স্ক্যান করুন",
+    "takePhoto": "ছবি তুলুন",
+    "processing": "ছবি প্রক্রিয়াকরণ..."
+  },
+  "language": {
+    "title": "ভাষা সেটিংস",
+    "subtitle": "আপনার পছন্দের ভাষা বেছে নিন",
+    "english": "English",
+    "hindi": "हिंदी",
+    "bengali": "বাংলা",
+    "currentLanguage": "বর্তমান ভাষা",
+    "selectLanguage": "ভাষা নির্বাচন করুন",
+    "languageChanged": "ভাষা {{language}} এ পরিবর্তিত হয়েছে"
+  }
+}

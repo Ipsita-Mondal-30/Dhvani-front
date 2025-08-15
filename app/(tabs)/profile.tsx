@@ -7,12 +7,17 @@ import {
   Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTranslation } from "react-i18next";
 
 import { useAppStore } from "@/store/useAppStore";
 import { PDFService } from "@/services/pdfService";
+import { useTheme } from "@/src/contexts/ThemeContext";
+import SimpleHamburgerMenu from "@/src/components/SimpleHamburgerMenu";
 
 const Profile = () => {
-  const { pdfFiles, clearAll, hasHydrated } = useAppStore();
+  const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
+  const { pdfFiles, clearAll, removePDFFile, hasHydrated } = useAppStore();
 
   // Don't render until store is hydrated
   if (!hasHydrated) {
@@ -47,9 +52,12 @@ const Profile = () => {
   const totalSize = pdfFiles.reduce((sum, file) => sum + file.size, 0);
 
   return (
-    <View className="flex-1 bg-slate-900">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      {/* Simple Hamburger Menu */}
+      <SimpleHamburgerMenu />
+      
       <LinearGradient
-        colors={['#0F172A', '#1E293B', '#334155']}
+        colors={isDark ? ['#0F172A', '#1E293B', '#334155'] : ['#F8FAFC', '#F1F5F9', '#E2E8F0']}
         className="absolute inset-0"
       />
       
@@ -61,10 +69,10 @@ const Profile = () => {
         {/* Header */}
         <View className="mt-16 mb-8">
           <Text className="mb-2 text-3xl font-bold text-center text-white">
-            Profile
+            {t('profile.title')}
           </Text>
           <Text className="text-base text-center text-slate-300">
-            App settings and data management
+            {t('profile.subtitle')}
           </Text>
         </View>
 
@@ -79,25 +87,114 @@ const Profile = () => {
 
         {/* Storage Statistics */}
         <View className="p-4 mb-6 rounded-xl border bg-slate-800/30 border-slate-700/50">
-          <Text className="mb-4 text-lg font-bold text-white">📊 Storage</Text>
+          <Text className="mb-4 text-lg font-bold text-white">📊 {t('profile.storage')}</Text>
           <View className="space-y-3">
             <View className="flex-row justify-between">
-              <Text className="text-slate-300">Total PDF Files</Text>
+              <Text className="text-slate-300">{t('history.totalPdfs')}</Text>
               <Text className="font-semibold text-white">{pdfFiles.length}</Text>
             </View>
             <View className="flex-row justify-between">
-              <Text className="text-slate-300">Storage Used</Text>
+              <Text className="text-slate-300">{t('profile.storageUsed')}</Text>
               <Text className="font-semibold text-white">
                 {PDFService.formatFileSize(totalSize)}
               </Text>
             </View>
             <View className="flex-row justify-between">
-              <Text className="text-slate-300">Total Characters</Text>
+              <Text className="text-slate-300">{t('history.totalCharacters')}</Text>
               <Text className="font-semibold text-white">
                 {pdfFiles.reduce((sum, file) => sum + file.extractedText.length, 0).toLocaleString()}
               </Text>
             </View>
           </View>
+        </View>
+
+        {/* PDF History Section */}
+        <View className="p-4 mb-6 rounded-xl border bg-slate-800/30 border-slate-700/50">
+          <Text className="mb-4 text-lg font-bold text-white">📄 {t('history.title')}</Text>
+          
+          {pdfFiles.length === 0 ? (
+            <View className="items-center p-8">
+              <Text className="mb-4 text-2xl">📄</Text>
+              <Text className="mb-2 text-lg font-semibold text-white">{t('history.noPdfsYet')}</Text>
+              <Text className="text-center text-slate-400">
+                {t('history.noPdfsDescription')}
+              </Text>
+            </View>
+          ) : (
+            <View className="space-y-3">
+              {pdfFiles.slice(0, 3).map((pdf) => (
+                <View
+                  key={pdf.id}
+                  className="p-3 rounded-lg border bg-slate-700/50 border-slate-600"
+                >
+                  <View className="flex-row justify-between items-start mb-2">
+                    <View className="flex-1 mr-4">
+                      <Text className="mb-1 text-base font-bold text-white">
+                        {pdf.name}
+                      </Text>
+                      <Text className="text-sm text-slate-400">
+                        {PDFService.formatFileSize(pdf.size)} • {
+                          pdf.createdAt && pdf.createdAt instanceof Date 
+                            ? pdf.createdAt.toLocaleDateString()
+                            : 'Recently added'
+                        }
+                      </Text>
+                      <Text className="text-sm text-slate-400">
+                        {pdf.extractedText.length} {t('history.charactersExtracted')}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View className="flex-row gap-2 mt-2">
+                    <TouchableOpacity
+                      onPress={() => {
+                        // Set as current PDF for editing
+                        Alert.alert(
+                          t('common.success'),
+                          `"${pdf.name}" is now active for editing.`
+                        );
+                      }}
+                      className="flex-1 px-3 py-2 bg-blue-500 rounded-lg"
+                    >
+                      <Text className="font-semibold text-center text-white text-sm">
+                        {t('history.select')}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      onPress={() => {
+                        Alert.alert(
+                          t('common.delete'),
+                          `Are you sure you want to delete "${pdf.name}"?`,
+                          [
+                            { text: t('common.cancel'), style: "cancel" },
+                            {
+                              text: t('common.delete'),
+                              style: "destructive",
+                              onPress: () => removePDFFile(pdf.id),
+                            },
+                          ]
+                        );
+                      }}
+                      className="px-3 py-2 rounded-lg bg-red-500/20"
+                    >
+                      <Text className="font-semibold text-center text-red-400 text-sm">
+                        {t('common.delete')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+              
+              {pdfFiles.length > 3 && (
+                <View className="items-center p-3">
+                  <Text className="text-slate-400 text-sm">
+                    And {pdfFiles.length - 3} more files...
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* About */}

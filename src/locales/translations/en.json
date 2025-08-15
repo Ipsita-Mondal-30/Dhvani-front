@@ -1,0 +1,127 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done"
+  },
+  "navigation": {
+    "home": "Home",
+    "speech": "Speech",
+    "settings": "Settings",
+    "history": "History",
+    "sos": "SOS",
+    "currency": "Currency",
+    "profile": "Profile"
+  },
+  "home": {
+    "title": "Dhvani",
+    "subtitle": "Voice for Everyone",
+    "welcome": "Welcome to Dhvani",
+    "description": "Your PDF to Text companion with voice accessibility features"
+  },
+  "speech": {
+    "title": "Speech",
+    "uploadPdf": "Upload PDF",
+    "generateSpeech": "Generate Speech",
+    "editText": "Edit extracted text...",
+    "noTextExtracted": "No text could be extracted",
+    "textExtracted": "Text extracted successfully",
+    "characters": "characters",
+    "willBeTruncated": "Will be truncated"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Customize your app experience",
+    "language": "Language",
+    "appSettings": "App Settings",
+    "darkMode": "Dark Mode",
+    "useDarkTheme": "Use dark theme",
+    "notifications": "Notifications",
+    "enableNotifications": "Enable app notifications",
+    "voiceFeedback": "Voice Feedback",
+    "enableVoiceResponses": "Enable voice responses",
+    "accessibility": "Accessibility",
+    "accessibilityDescription": "This app is designed with accessibility in mind. All features support screen readers and voice navigation. Voice feedback helps users understand app responses.",
+    "about": "About",
+    "version": "Version",
+    "build": "Build"
+  },
+  "history": {
+    "title": "PDF History",
+    "subtitle": "Your uploaded PDF files and extracted text",
+    "storageInfo": "Storage Info",
+    "totalPdfs": "Total PDFs",
+    "totalSize": "Total Size",
+    "totalCharacters": "Total Characters",
+    "noPdfsYet": "No PDFs Yet",
+    "noPdfsDescription": "Upload a PDF file in the Speech tab to get started",
+    "select": "Select",
+    "charactersExtracted": "characters extracted"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "App settings and data management",
+    "appInfo": "Dhvani",
+    "appDescription": "Voice for Everyone - Your PDF to Text companion",
+    "storage": "Storage",
+    "storageUsed": "Storage Used",
+    "features": "Features",
+    "featuresList": [
+      "PDF file upload and processing",
+      "Automatic text extraction",
+      "Text editing and saving",
+      "Local storage with AsyncStorage",
+      "Simple and accessible interface"
+    ],
+    "dangerZone": "Danger Zone",
+    "dangerDescription": "This action will permanently delete all your PDF files and extracted text.",
+    "clearAllData": "Clear All Data",
+    "footerText": "Made with ❤️ for accessibility"
+  },
+  "sos": {
+    "title": "Emergency SOS",
+    "subtitle": "Quick access to emergency services",
+    "sendSos": "Send SOS",
+    "sosHistory": "SOS History",
+    "emergencyContacts": "Emergency Contacts"
+  },
+  "currency": {
+    "title": "Currency Reader",
+    "subtitle": "Identify currency notes using camera",
+    "scanNote": "Scan Currency Note",
+    "takePhoto": "Take Photo",
+    "processing": "Processing image..."
+  },
+  "language": {
+    "title": "Language Settings",
+    "subtitle": "Choose your preferred language",
+    "english": "English",
+    "hindi": "हिंदी",
+    "bengali": "বাংলা",
+    "currentLanguage": "Current Language",
+    "selectLanguage": "Select Language",
+    "languageChanged": "Language changed to {{language}}"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "info": "Information"
+  }
+}

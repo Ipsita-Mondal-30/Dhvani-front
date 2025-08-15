@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BackendService } from "@/services/backendService";
 import { TTSService } from "@/services/ttsService";
 import { useSpeech } from "@/hooks/useSpeech";
+import SimpleHamburgerMenu from "@/src/components/SimpleHamburgerMenu";
 
 const Speech = () => {
   const {
@@ -50,6 +51,9 @@ const Speech = () => {
   return (
     <View className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+      
+      {/* Simple Hamburger Menu */}
+      <SimpleHamburgerMenu />
       
       {/* Header */}
       <View className="px-6 pt-14 pb-4 bg-white border-b border-gray-100 shadow-sm">
@@ -169,12 +173,12 @@ const Speech = () => {
             </View>
             
             <View className="flex-row items-center mb-3">
-              <View className={`px-3 py-1 rounded-full ${inputText.length > 4500 ? 'bg-orange-100' : 'bg-gray-100'}`}>
-                <Text className={`text-xs font-bold ${inputText.length > 4500 ? 'text-orange-600' : 'text-gray-700'}`}>
-                  {inputText.length} characters
+              <View className={`px-3 py-1 rounded-full ${(inputText?.length || 0) > 4500 ? 'bg-orange-100' : 'bg-gray-100'}`}>
+                <Text className={`text-xs font-bold ${(inputText?.length || 0) > 4500 ? 'text-orange-600' : 'text-gray-700'}`}>
+                  {inputText?.length || 0} characters
                 </Text>
               </View>
-              {inputText.length > 4500 && (
+              {(inputText?.length || 0) > 4500 && (
                 <View className="px-2 py-1 ml-2 bg-orange-50 rounded-full">
                   <Text className="text-xs font-bold text-orange-600">Will be truncated</Text>
                 </View>
@@ -239,22 +243,22 @@ const Speech = () => {
           {!hasAudio ? (
             <TouchableOpacity
               onPress={handleGenerateSpeech}
-              disabled={isTTSLoading || !inputText.trim()}
-              className={`rounded-xl overflow-hidden ${isTTSLoading || !inputText.trim() ? 'opacity-50' : ''}`}
+              disabled={isTTSLoading || !inputText?.trim()}
+              className={`rounded-xl overflow-hidden ${isTTSLoading || !inputText?.trim() ? 'opacity-50' : ''}`}
               activeOpacity={0.85}
             >
               <LinearGradient
-                colors={isTTSLoading || !inputText.trim() ? ['#F3F4F6', '#F3F4F6'] : ['#3B82F6', '#2563EB']}
+                colors={isTTSLoading || !inputText?.trim() ? ['#F3F4F6', '#F3F4F6'] : ['#3B82F6', '#2563EB']}
                 className="flex-row justify-center items-center p-4"
               >
                 <View className="justify-center items-center mr-3 w-10 h-10 rounded-full bg-white/20">
                   <Ionicons 
                     name={isTTSLoading ? "hourglass-outline" : "play"} 
                     size={20} 
-                    color={isTTSLoading || !inputText.trim() ? '#9CA3AF' : '#FFFFFF'} 
+                    color={isTTSLoading || !inputText?.trim() ? '#9CA3AF' : '#FFFFFF'} 
                   />
                 </View>
-                <Text className={`text-lg font-bold ${isTTSLoading || !inputText.trim() ? 'text-gray-400' : 'text-white'}`}>
+                <Text className={`text-lg font-bold ${isTTSLoading || !inputText?.trim() ? 'text-gray-400' : 'text-white'}`}>
                   {isTTSLoading ? 'Generating Speech...' : 'Generate Speech'}
                 </Text>
               </LinearGradient>
