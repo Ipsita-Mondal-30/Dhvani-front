@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Dhvani - Text to Speech app for accessibility",
   "scripts": {
-    "start": "expo start",
+    "start": "node api.js && expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
