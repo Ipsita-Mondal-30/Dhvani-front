@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,10 @@ import {
   Image,
   TouchableOpacity,
   StatusBar,
+  Alert,
+  PanResponder,
+  Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,7 +21,9 @@ import { icons } from "@/constants/icons";
 import { getSpeechLanguageCode, changeLanguage } from "@/src/locales/i18n";
 import SimpleHamburgerMenu from "@/src/components/SimpleHamburgerMenu";
 import { useTheme } from "@/src/contexts/ThemeContext";
+import { SOSService } from "@/services/sosService";
 
+const { width, height } = Dimensions.get('window');
 
 const FeatureCard = ({ icon, title, description, onPress }: any) => (
   <TouchableOpacity
@@ -56,8 +62,219 @@ const Index = () => {
   const { t, i18n } = useTranslation();
   const { colors, isDark } = useTheme();
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSendingSOS, setIsSendingSOS] = useState(false);
+  const [sosCountdown, setSOSCountdown] = useState(0);
+  
+  // Voice recognition variables
+  const speechBuffer = useRef<string[]>([]);
+  const lastSpeechTime = useRef<number>(0);
+  const sosTimer = useRef<NodeJS.Timeout | null>(null);
 
   const welcomeMessage = t('home.description');
+
+  // Emergency SOS functionality
+  const triggerEmergencySOS = async () => {
+    console.log('🚨 [Index] Emergency SOS triggered');
+    
+    // Stop any ongoing speech
+    Speech.stop();
+    setIsSpeaking(false);
+    
+    // Show countdown alert
+    Alert.alert(
+      "🚨 EMERGENCY SOS",
+      "Emergency services will be contacted in 5 seconds. Tap Cancel to stop.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+          onPress: () => {
+            console.log('❌ [Index] SOS cancelled by user');
+            setSOSCountdown(0);
+            if (sosTimer.current) {
+              clearInterval(sosTimer.current);
+              sosTimer.current = null;
+            }
+            
+            // Voice feedback for cancellation
+            Speech.speak("Emergency SOS cancelled", {
+              language: 'en',
+              pitch: 1.0,
+              rate: 0.8,
+            });
+          }
+        },
+        {
+          text: "Send Now",
+          style: "destructive",
+          onPress: () => executeSOS()
+        }
+      ]
+    );
+
+    // Start countdown
+    let countdown = 5;
+    setSOSCountdown(countdown);
+    
+    sosTimer.current = setInterval(() => {
+      countdown--;
+      setSOSCountdown(countdown);
+      
+      // Voice countdown
+      Speech.speak(`${countdown}`, {
+        language: 'en',
+        pitch: 1.2,
+        rate: 1.0,
+      });
+      
+      if (countdown <= 0) {
+        if (sosTimer.current) {
+          clearInterval(sosTimer.current);
+          sosTimer.current = null;
+        }
+        setSOSCountdown(0);
+        executeSOS();
+      }
+    }, 1000);
+  };
+
+  const executeSOS = async () => {
+    setIsSendingSOS(true);
+    
+    try {
+      // Voice feedback
+      Speech.speak("Sending emergency SOS now. Please wait.", {
+        language: 'en',
+        pitch: 1.1,
+        rate: 0.9,
+      });
+
+      const result = await SOSService.sendSOS();
+      
+      if (result.success) {
+        Alert.alert(
+          "✅ Emergency SOS Sent",
+          result.message,
+          [{ text: "OK" }]
+        );
+        
+        Speech.speak("Emergency SOS sent successfully. Help is on the way.", {
+          language: 'en',
+          pitch: 1.0,
+          rate: 0.8,
+        });
+      } else {
+        Alert.alert(
+          "❌ SOS Failed",
+          result.message + "\n\nTrying to call emergency services directly.",
+          [{ text: "OK" }]
+        );
+        
+        // Fallback: Try to call emergency services
+        await SOSService.callEmergencyServices();
+      }
+    } catch (error) {
+      console.error('💥 [Index] Emergency SOS failed:', error);
+      Alert.alert(
+        "❌ Emergency Error",
+        "Failed to send SOS. Please call emergency services directly.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setIsSendingSOS(false);
+    }
+  };
+
+  // Voice recognition for "help help help"
+  const startListening = () => {
+    if (isListening) return;
+    
+    setIsListening(true);
+    console.log('🎤 [Index] Started listening for voice commands');
+    
+    Speech.speak("Listening for voice commands. Say help help help for emergency.", {
+      language: 'en',
+      pitch: 1.0,
+      rate: 0.8,
+    });
+
+    // Mock voice recognition - in a real app, you'd use expo-speech-recognition or similar
+    // For now, we'll simulate it with a timer that checks for voice input
+    setTimeout(() => {
+      setIsListening(false);
+      console.log('🎤 [Index] Stopped listening for voice commands');
+    }, 10000); // Listen for 10 seconds
+  };
+
+  // Simulate voice recognition (replace with actual voice recognition in production)
+  const handleVoiceInput = (text: string) => {
+    const now = Date.now();
+    const words = text.toLowerCase().split(' ');
+    
+    // Add words to buffer
+    speechBuffer.current.push(...words);
+    lastSpeechTime.current = now;
+    
+    // Keep only recent words (last 5 seconds)
+    const cutoffTime = now - 5000;
+    speechBuffer.current = speechBuffer.current.filter((_, index) => {
+      return (now - lastSpeechTime.current) < 5000;
+    });
+    
+    // Check for "help help help" pattern
+    const bufferText = speechBuffer.current.join(' ');
+    const helpCount = (bufferText.match(/help/g) || []).length;
+    
+    if (helpCount >= 3) {
+      console.log('🚨 [Index] Voice emergency trigger detected: "help help help"');
+      speechBuffer.current = []; // Clear buffer
+      triggerEmergencySOS();
+    }
+  };
+
+  // Pan responder for detecting taps on empty areas
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: (evt, gestureState) => {
+      // Only respond to single taps (not drags)
+      return true;
+    },
+    onMoveShouldSetPanResponder: () => false,
+    onPanResponderGrant: (evt, gestureState) => {
+      // Handle tap on empty area
+      console.log('👆 [Index] Tap detected on empty area');
+      
+      // Check if tap is on an interactive element (rough approximation)
+      const { pageX, pageY } = evt.nativeEvent;
+      
+      // Approximate positions of interactive elements to avoid
+      const hamburgerMenuArea = { x: 20, y: 60, width: 56, height: 56 };
+      const headerHeight = 200; // Approximate header height
+      const featureCardsStartY = headerHeight + 100;
+      
+      // If tap is in hamburger menu area, ignore
+      if (pageX >= hamburgerMenuArea.x && 
+          pageX <= hamburgerMenuArea.x + hamburgerMenuArea.width &&
+          pageY >= hamburgerMenuArea.y && 
+          pageY <= hamburgerMenuArea.y + hamburgerMenuArea.height) {
+        return;
+      }
+      
+      // If tap is on feature cards area (approximate), ignore
+      if (pageY >= featureCardsStartY) {
+        return;
+      }
+      
+      // If tap is on language switcher or buttons, ignore (you can fine-tune these coordinates)
+      if (pageY >= headerHeight && pageY <= featureCardsStartY) {
+        return;
+      }
+      
+      // Tap is on empty area - trigger emergency alert
+      console.log('🚨 [Index] Emergency tap detected on empty area');
+      triggerEmergencySOS();
+    },
+  });
 
   const speakWelcomeMessage = async () => {
     try {
@@ -115,6 +332,13 @@ const Index = () => {
     };
 
     initializeWelcome();
+
+    // Cleanup
+    return () => {
+      if (sosTimer.current) {
+        clearInterval(sosTimer.current);
+      }
+    };
   }, []);
 
   const features = [
@@ -139,8 +363,39 @@ const Index = () => {
   ];
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+    <View className="flex-1" style={{ backgroundColor: colors.background }} {...panResponder.panHandlers}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
+
+      {/* Emergency SOS Overlay */}
+      {(isSendingSOS || sosCountdown > 0) && (
+        <View className="absolute inset-0 bg-red-500/90 z-50 flex-1 justify-center items-center">
+          <View className="bg-white rounded-xl p-8 mx-6">
+            <View className="items-center">
+              <Ionicons name="warning" size={48} color="#DC2626" />
+              <Text className="text-2xl font-bold text-red-600 mt-4 mb-2">EMERGENCY SOS</Text>
+              
+              {sosCountdown > 0 ? (
+                <>
+                  <Text className="text-6xl font-bold text-red-600 my-4">{sosCountdown}</Text>
+                  <Text className="text-lg text-gray-700 text-center mb-4">
+                    Calling emergency services in {sosCountdown} seconds
+                  </Text>
+                  <Text className="text-sm text-gray-500 text-center">
+                    Tap anywhere to cancel
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <ActivityIndicator size="large" color="#DC2626" style={{ marginVertical: 16 }} />
+                  <Text className="text-lg text-gray-700 text-center">
+                    Sending emergency SOS...
+                  </Text>
+                </>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Subtle gradient background */}
       <LinearGradient
@@ -151,6 +406,22 @@ const Index = () => {
       {/* Simple Hamburger Menu */}
       <SimpleHamburgerMenu />
 
+      {/* Emergency Help Instructions */}
+      <View className="absolute top-20 right-4 bg-red-100 border border-red-300 rounded-lg p-3 z-40">
+        <Text className="text-xs font-semibold text-red-700 mb-1">Emergency Help</Text>
+        <Text className="text-xs text-red-600">• Tap empty area for SOS</Text>
+        <Text className="text-xs text-red-600">• Say "help help help"</Text>
+        <TouchableOpacity
+          onPress={startListening}
+          disabled={isListening}
+          className={`mt-2 px-2 py-1 rounded ${isListening ? 'bg-red-200' : 'bg-red-500'}`}
+        >
+          <Text className={`text-xs font-semibold ${isListening ? 'text-red-700' : 'text-white'}`}>
+            {isListening ? 'Listening...' : 'Enable Voice'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -159,7 +430,7 @@ const Index = () => {
         {/* Header Section */}
         <View className="items-center px-6 pt-16 pb-8">
           {/* Logo with enhanced styling */}
-          <View
+          <TouchableOpacity
             className="justify-center items-center mb-6 w-20 h-20 bg-blue-500 rounded-2xl shadow-lg"
             style={{
               shadowColor: "#2563EB",
@@ -168,9 +439,10 @@ const Index = () => {
               shadowRadius: 12,
               elevation: 8,
             }}
+            onPress={() => router.push("/speech")}
           >
             <Image source={icons.logo} className="w-12 h-12" tintColor="#FFFFFF" />
-          </View>
+          </TouchableOpacity>
 
           {/* App name with modern typography */}
           <Text
@@ -297,8 +569,6 @@ const Index = () => {
                   हिंदी
                 </Text>
               </TouchableOpacity>
-
-
             </View>
           </View>
         </View>

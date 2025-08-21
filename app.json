@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Dhvani - Text to Speech",
+    "name": "Dhvani ",
     "slug": "dhvani-text-to-speech",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -33,7 +33,8 @@
       "expo-router",
       "expo-audio",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-speech-recognition"
     ],
     "experiments": {
       "typedRoutes": true

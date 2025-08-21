@@ -21,7 +21,7 @@ interface DocumentsResponse {
 
 export class BackendService {
   // Default URL - using network IP for physical device testing
-  private static BASE_URL = 'http://10.12.67.238:3000';
+  private static BASE_URL = 'https://dhvani-back.vercel.app/';
   
   // Alternative URLs for different environments:
   // Production: 'https://dhvani-backend.vercel.app'

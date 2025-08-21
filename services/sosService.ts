@@ -16,12 +16,72 @@ export interface SOSLog {
   updatedAt: string;
 }
 
+export interface EmergencyNumbers {
+  police: string;
+  fire: string;
+  medical: string;
+  general: string;
+}
+
 export class SOSService {
   // Emergency contacts - in a real app, these would be stored in user preferences
   private static emergencyContacts: string[] = [
     // Add your emergency contact numbers here
     // '+1234567890', // Example format
   ];
+
+  // Regional emergency numbers
+  private static emergencyNumbers: { [key: string]: EmergencyNumbers } = {
+    'US': { police: '911', fire: '911', medical: '911', general: '911' },
+    'CA': { police: '911', fire: '911', medical: '911', general: '911' },
+    'GB': { police: '999', fire: '999', medical: '999', general: '999' },
+    'EU': { police: '112', fire: '112', medical: '112', general: '112' },
+    'IN': { police: '100', fire: '101', medical: '108', general: '112' },
+    'AU': { police: '000', fire: '000', medical: '000', general: '000' },
+    'JP': { police: '110', fire: '119', medical: '119', general: '110' },
+    'KR': { police: '112', fire: '119', medical: '119', general: '112' },
+    'CN': { police: '110', fire: '119', medical: '120', general: '110' },
+    'BR': { police: '190', fire: '193', medical: '192', general: '190' },
+    'MX': { police: '911', fire: '911', medical: '911', general: '911' },
+    'RU': { police: '102', fire: '101', medical: '103', general: '112' },
+    'ZA': { police: '10111', fire: '10177', medical: '10177', general: '112' },
+    'DEFAULT': { police: '112', fire: '112', medical: '112', general: '112' }
+  };
+
+  // Get emergency number based on location
+  private static async getEmergencyNumber(type: 'police' | 'fire' | 'medical' | 'general' = 'general'): Promise<string> {
+    try {
+      // Try to get location for better emergency number detection
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Low,
+        });
+        
+        // Use reverse geocoding to determine country
+        const reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+        
+        if (reverseGeocode.length > 0) {
+          const countryCode = reverseGeocode[0].isoCountryCode?.toUpperCase() || 'DEFAULT';
+          const emergencyNumbers = this.emergencyNumbers[countryCode] || this.emergencyNumbers['DEFAULT'];
+          return emergencyNumbers[type];
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ [SOSService] Could not determine location for emergency number:', error);
+    }
+    
+    // Fallback based on platform and region
+    if (Platform.OS === 'ios') {
+      return '911'; // Default for iOS (US/Canada)
+    } else {
+      return '112'; // Default for Android (International)
+    }
+  }
 
   // Send SOS with location
   static async sendSOS(): Promise<{ success: boolean; message: string; emergencyMessage?: string }> {
@@ -35,9 +95,12 @@ export class SOSService {
       if (status !== 'granted') {
         console.error('❌ [SOS] Location permission denied');
         const logResult = await this.logSOSEvent(0, 0, 'Permission Denied', '');
-        return { 
-          success: false, 
-          message: 'Location permission is required for SOS functionality.' 
+        
+        // Still try to call emergency services without location
+        const callResult = await this.callEmergencyServices();
+        return {
+          success: callResult.success,
+          message: `Location permission denied. ${callResult.message}`
         };
       }
 
@@ -52,7 +115,7 @@ export class SOSService {
 
       // Step 3: Create emergency message
       const googleMapsLink = `https://maps.google.com/?q=${latitude},${longitude}`;
-      const emergencyMessage = `🚨 EMERGENCY ALERT from Dhvani App!\n\nI need immediate help!\n\nMy current location:\n${googleMapsLink}\n\nCoordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n\nThis is an automated emergency message.`;
+      const emergencyMessage = `🚨 EMERGENCY ALERT from Dhvani App!\n\nI need immediate help!\n\nMy current location:\n${googleMapsLink}\n\nCoordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n\nTime: ${new Date().toLocaleString()}\n\nThis is an automated emergency message.`;
 
       console.log('💬 [SOS] Emergency message created');
 
@@ -104,7 +167,7 @@ export class SOSService {
         }
       }
 
-      // Step 4.5: Call emergency services if SMS failed
+      // Step 4.5: Call emergency services if SMS failed or no contacts
       if (shouldCallEmergency) {
         console.log('📞 [SOS] Attempting to call emergency services...');
         const callResult = await this.callEmergencyServices();
@@ -138,20 +201,26 @@ export class SOSService {
       // Log the error
       await this.logSOSEvent(0, 0, 'Error', `SOS Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
+      // Try to call emergency services as last resort
+      const callResult = await this.callEmergencyServices();
+      
       return {
-        success: false,
-        message: 'An unexpected error occurred while sending SOS. Please try again or contact emergency services directly.'
+        success: callResult.success,
+        message: `An unexpected error occurred while sending SOS. ${callResult.message}`
       };
     }
   }
-  // Call emergency services (911 in US, 112 in EU, etc.)
-  static async callEmergencyServices(): Promise<{ success: boolean; message: string }> {
+
+  // Call emergency services with regional number detection
+  static async callEmergencyServices(type: 'police' | 'fire' | 'medical' | 'general' = 'general'): Promise<{ success: boolean; message: string }> {
     try {
       console.log('📞 [SOS] Calling emergency services...');
       
-      // Determine emergency number based on region/platform
-      const emergencyNumber = Platform.OS === 'ios' ? '911' : '112'; // Default fallback
+      // Get appropriate emergency number for region
+      const emergencyNumber = await this.getEmergencyNumber(type);
       const phoneUrl = `tel:${emergencyNumber}`;
+      
+      console.log(`📞 [SOS] Emergency number determined: ${emergencyNumber}`);
       
       // Check if the device can make phone calls
       const canOpen = await Linking.canOpenURL(phoneUrl);
@@ -167,7 +236,7 @@ export class SOSService {
         console.error('❌ [SOS] Device cannot make phone calls');
         return {
           success: false,
-          message: 'Device cannot make phone calls. Please call emergency services manually.'
+          message: `Device cannot make phone calls. Please dial ${emergencyNumber} manually.`
         };
       }
     } catch (error) {
@@ -175,6 +244,125 @@ export class SOSService {
       return {
         success: false,
         message: 'Failed to initiate emergency call. Please call emergency services manually.'
+      };
+    }
+  }
+
+  // Direct emergency call using Linking API
+  static async callEmergencyNumber(phoneNumber?: string): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('📞 [SOS] Making direct emergency call...');
+      
+      // Use provided number, emergency contact, or default emergency number
+      let numberToCall = phoneNumber;
+      
+      if (!numberToCall) {
+        // Try to use first emergency contact if available
+        if (this.emergencyContacts.length > 0) {
+          numberToCall = this.emergencyContacts[0];
+          console.log(`📞 [SOS] Using emergency contact: ${numberToCall}`);
+        } else {
+          // Fall back to general emergency number
+          numberToCall = await this.getEmergencyNumber('general');
+          console.log(`📞 [SOS] Using general emergency number: ${numberToCall}`);
+        }
+      }
+      
+      const phoneUrl = `tel:${numberToCall}`;
+      
+      // Check if the device can make phone calls
+      const canOpen = await Linking.canOpenURL(phoneUrl);
+      
+      if (canOpen) {
+        console.log(`📞 [SOS] Opening dialer for ${numberToCall}...`);
+        await Linking.openURL(phoneUrl);
+        return {
+          success: true,
+          message: `Emergency call initiated to ${numberToCall}.`
+        };
+      } else {
+        console.error('❌ [SOS] Device cannot make phone calls');
+        return {
+          success: false,
+          message: `Device cannot make phone calls. Please dial ${numberToCall} manually.`
+        };
+      }
+    } catch (error) {
+      console.error('💥 [SOS] Failed to make direct emergency call:', error);
+      return {
+        success: false,
+        message: 'Failed to initiate emergency call. Please call emergency services manually.'
+      };
+    }
+  }
+
+  // Quick emergency dial methods for specific services
+  static async callPolice(): Promise<{ success: boolean; message: string }> {
+    return this.callEmergencyServices('police');
+  }
+
+  static async callFire(): Promise<{ success: boolean; message: string }> {
+    return this.callEmergencyServices('fire');
+  }
+
+  static async callMedical(): Promise<{ success: boolean; message: string }> {
+    return this.callEmergencyServices('medical');
+  }
+
+  // Voice-activated SOS (for "help help help" detection)
+  static async voiceActivatedSOS(): Promise<{ success: boolean; message: string }> {
+    console.log('🎤 [SOS] Voice-activated SOS triggered');
+    
+    // Add slight delay to allow user to cancel if false positive
+    return new Promise((resolve) => {
+      setTimeout(async () => {
+        const result = await this.sendSOS();
+        resolve(result);
+      }, 2000); // 2 second delay
+    });
+  }
+
+  // Panic mode - immediate emergency call without confirmation
+  static async panicMode(): Promise<{ success: boolean; message: string }> {
+    console.log('🚨 [SOS] PANIC MODE ACTIVATED - Immediate emergency call');
+    
+    try {
+      // Immediately call emergency services without SMS
+      const callResult = await this.callEmergencyServices();
+      
+      // Also try to send location via SMS if contacts exist
+      if (this.emergencyContacts.length > 0) {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === 'granted') {
+            const location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.High,
+            });
+            
+            const { latitude, longitude } = location.coords;
+            const googleMapsLink = `https://maps.google.com/?q=${latitude},${longitude}`;
+            const panicMessage = `🚨 PANIC ALERT from Dhvani App!\n\nEMERGENCY - I need immediate help!\n\nLocation: ${googleMapsLink}\n\nTime: ${new Date().toLocaleString()}\n\nThis is an automated panic alert.`;
+            
+            await SMS.sendSMSAsync(this.emergencyContacts, panicMessage);
+            
+            // Log the panic event
+            await this.logSOSEvent(latitude, longitude, 'Panic Mode + Call', panicMessage);
+          }
+        } catch (smsError) {
+          console.error('❌ [SOS] Failed to send panic SMS:', smsError);
+        }
+      }
+      
+      return {
+        success: callResult.success,
+        message: `PANIC MODE: ${callResult.message}`
+      };
+      
+    } catch (error) {
+      console.error('💥 [SOS] Panic mode failed:', error);
+      return {
+        success: false,
+        message: 'Panic mode failed. Please call emergency services manually.'
       };
     }
   }
@@ -258,5 +446,25 @@ export class SOSService {
   // Get current emergency contacts
   static getEmergencyContacts(): string[] {
     return [...this.emergencyContacts];
+  }
+
+  // Get emergency numbers for current region
+  static async getRegionalEmergencyNumbers(): Promise<EmergencyNumbers> {
+    try {
+      const generalNumber = await this.getEmergencyNumber('general');
+      const policeNumber = await this.getEmergencyNumber('police');
+      const fireNumber = await this.getEmergencyNumber('fire');
+      const medicalNumber = await this.getEmergencyNumber('medical');
+      
+      return {
+        general: generalNumber,
+        police: policeNumber,
+        fire: fireNumber,
+        medical: medicalNumber
+      };
+    } catch (error) {
+      console.error('❌ [SOS] Failed to get regional emergency numbers:', error);
+      return this.emergencyNumbers['DEFAULT'];
+    }
   }
 }

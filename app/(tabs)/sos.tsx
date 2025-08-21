@@ -221,28 +221,27 @@ const SOSScreen = () => {
 
   const callEmergencyManually = async () => {
     try {
-      const emergencyNumber = '911'; // Default to 911
-      const phoneUrl = `tel:${emergencyNumber}`;
+      // Use the new callEmergencyNumber method from SOSService
+      const result = await SOSService.callEmergencyNumber();
       
-      const canOpen = await Linking.canOpenURL(phoneUrl);
-      if (canOpen) {
-        await Linking.openURL(phoneUrl);
-        Speech.speak(`Calling emergency services at ${emergencyNumber}.`, {
-          language: 'en',
-          pitch: 1.0,
-          rate: 0.8,
-        });
-      } else {
+      Speech.speak(result.message, {
+        language: 'en',
+        pitch: 1.0,
+        rate: 0.8,
+      });
+      
+      if (!result.success) {
         Alert.alert(
-          "Cannot Make Call",
-          `Please dial ${emergencyNumber} manually for emergency services.`,
+          "Call Status",
+          result.message,
           [{ text: "OK" }]
         );
       }
     } catch (error) {
+      console.error('❌ [SOSScreen] Emergency call failed:', error);
       Alert.alert(
         "Call Failed",
-        "Please dial 911 manually for emergency services.",
+        "Please dial 911, 112, or 100 manually for emergency services.",
         [{ text: "OK" }]
       );
     }
