@@ -17,5 +17,5 @@
     "app/_layout.tsx",
     "nativewind-env.d.ts",
     "types/**/*.d.ts"
-, "../../dhwani/dhvani-backend/src/lib/Currency-history.tsx"  ]
+  ]
 }
