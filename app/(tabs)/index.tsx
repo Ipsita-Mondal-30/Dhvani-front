@@ -40,7 +40,12 @@ const SOS_VOICE_PATTERNS = [
   'हेल्प हेल्प हेल्प'
 ];
 
-const FeatureCard = ({ icon, title, description, onPress }: any) => (
+const FeatureCard = ({ icon, title, description, onPress }: {
+  icon: any;
+  title: string;
+  description: string;
+  onPress: () => void;
+}) => (
   <TouchableOpacity
     onPress={onPress}
     className="p-5 mb-4 bg-white rounded-xl border border-gray-100 shadow-md"
@@ -454,38 +459,39 @@ const Index = () => {
     }
   };
 
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: (evt, gestureState) => {
-      const { pageX, pageY } = evt.nativeEvent;
-      const hamburgerArea = { x: 20, y: 50, width: 56, height: 56 };
-      const headerHeight = 200;
-      const featureCardsStartY = headerHeight + 200;
-      if (pageX >= hamburgerArea.x && 
-          pageX <= hamburgerArea.x + hamburgerArea.width &&
-          pageY >= hamburgerArea.y && 
-          pageY <= hamburgerArea.y + hamburgerArea.height) {
-        return false;
-      }
-      if (pageY >= featureCardsStartY) {
-        return false;
-      }
-      if (pageY >= headerHeight && pageY <= featureCardsStartY) {
-        const languageSwitcherY = headerHeight + 50;
-        if (pageY >= languageSwitcherY && pageY <= languageSwitcherY + 100) {
-          return false;
-        }
-      }
-      return true;
-    },
-    onPanResponderGrant: (evt, gestureState) => {
-      if (isSosMode) {
-        cancelSOS();
-      } else {
-        triggerEmergencySOS();
-      }
-    },
-  });
+  // COMMENTED OUT: SOS Touch Screen Trigger
+  // const panResponder = PanResponder.create({
+  //   onStartShouldSetPanResponder: () => true,
+  //   onStartShouldSetPanResponderCapture: (evt, gestureState) => {
+  //     const { pageX, pageY } = evt.nativeEvent;
+  //     const hamburgerArea = { x: 20, y: 50, width: 56, height: 56 };
+  //     const headerHeight = 200;
+  //     const featureCardsStartY = headerHeight + 200;
+  //     if (pageX >= hamburgerArea.x && 
+  //         pageX <= hamburgerArea.x + hamburgerArea.width &&
+  //         pageY >= hamburgerArea.y && 
+  //         pageY <= hamburgerArea.y + hamburgerArea.height) {
+  //       return false;
+  //     }
+  //     if (pageY >= featureCardsStartY) {
+  //       return false;
+  //     }
+  //     if (pageY >= headerHeight && pageY <= featureCardsStartY) {
+  //       const languageSwitcherY = headerHeight + 50;
+  //       if (pageY >= languageSwitcherY && pageY <= languageSwitcherY + 100) {
+  //         return false;
+  //       }
+  //     }
+  //     return true;
+  //   },
+  //   onPanResponderGrant: (evt, gestureState) => {
+  //     if (isSosMode) {
+  //       cancelSOS();
+  //     } else {
+  //       triggerEmergencySOS();
+  //     }
+  //   },
+  // });
 
   const speakWelcomeMessage = async () => {
     try {
@@ -565,7 +571,9 @@ const Index = () => {
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} {...panResponder.panHandlers}>
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      {/* COMMENTED OUT: Touch screen SOS trigger */}
+      {/* {...panResponder.panHandlers} */}
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {(isSendingSOS || sosCountdown > 0 || isSosMode) && (
@@ -649,7 +657,8 @@ const Index = () => {
         ) : null}
         
         <Text className="text-xs font-semibold text-red-700 mb-1">Emergency Help</Text>
-        <Text className="text-xs text-red-600">• Tap empty area for SOS</Text>
+        {/* COMMENTED OUT: Touch screen SOS trigger info */}
+        {/* <Text className="text-xs text-red-600">• Tap empty area for SOS</Text> */}
         <Text className="text-xs text-red-600">• Say "help help help"</Text>
         
         <TouchableOpacity
@@ -969,7 +978,8 @@ const Index = () => {
             </Text>
             
             <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {/* COMMENTED OUT: Touch screen SOS trigger info */}
+              {/* <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="hand-left" size={16} color="#DC2626" />
                 <Text style={{
                   marginLeft: 12,
@@ -979,7 +989,7 @@ const Index = () => {
                 }}>
                   Tap anywhere on empty space to trigger SOS
                 </Text>
-              </View>
+              </View> */}
               
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="mic" size={16} color="#DC2626" />

@@ -16,14 +16,22 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dhvani.texttospeech"
+      "bundleIdentifier": "com.dhvani.texttospeech",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/logo.png",
         "backgroundColor": "#0F172A"
       },
-      "package": "com.dhvani.texttospeech"
+      "package": "com.dhvani.texttospeech",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/icons/logo.png",
@@ -40,6 +48,12 @@
       "typedRoutes": true
     },
     "newArchEnabled": true,
-    "scheme": "dhvani"
+    "scheme": "dhvani",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b9b7419d-73f3-462a-8d55-c1e3e4bdb331"
+      }
+    }
   }
 }
