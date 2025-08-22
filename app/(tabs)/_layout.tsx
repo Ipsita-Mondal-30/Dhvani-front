@@ -9,6 +9,7 @@ export default function TabsLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="speech" />
+      <Stack.Screen name="braille" />
       <Stack.Screen name="settings" />
       <Stack.Screen name="sos" />
       <Stack.Screen name="currency" />

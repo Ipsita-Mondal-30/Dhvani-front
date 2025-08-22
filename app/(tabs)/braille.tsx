@@ -17,6 +17,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as Speech from 'expo-speech';
+import SimpleHamburgerMenu from '@/src/components/SimpleHamburgerMenu';
 
 const { width } = Dimensions.get('window');
 
@@ -441,7 +442,8 @@ export default function BrailleScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <SimpleHamburgerMenu/>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
       {/* Header */}
       <View style={styles.header}>
@@ -457,7 +459,7 @@ export default function BrailleScreen() {
           accessibilityLabel="उपयोग का तरीका सुनें"
           accessibilityHint="इस बटन को दबाने से आपको ऐप के उपयोग का तरीका सुनाई देगा"
         >
-          <Text style={styles.voiceButtonText}>🔊 सहायता सुनें</Text>
+          <Text style={styles.voiceButtonText}>Help</Text>
         </TouchableOpacity>
       </View>
 
@@ -499,9 +501,9 @@ export default function BrailleScreen() {
 
         {/* Manual Text Input Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Type Text Directly</Text>
+          <Text style={styles.sectionTitle}>Type Your Text</Text>
           <Text style={styles.sectionDescription}>
-            You can also type or paste text directly here
+            Enter the text you want to be converted to Braille
           </Text>
           
           <View style={styles.inputContainer}>
@@ -509,7 +511,7 @@ export default function BrailleScreen() {
               style={styles.textInput}
               multiline
               placeholder="Type or paste your text here to convert to Braille..."
-              placeholderTextColor="#64748b"
+              placeholderTextColor="#94a3b8"
               value={typedText}
               onChangeText={handleTyping}
               onFocus={handleTextInputFocus}
@@ -524,7 +526,7 @@ export default function BrailleScreen() {
         {/* Processing Status */}
         {busy && (
           <View style={styles.processingContainer}>
-            <ActivityIndicator size="large" color="#1e40af" />
+            <ActivityIndicator size="large" color="#3b82f6" />
             <Text style={styles.processingText}>{currentAction}</Text>
             <Text style={styles.processingSubtext}>Please wait while we process your request</Text>
           </View>
@@ -608,7 +610,7 @@ export default function BrailleScreen() {
             accessibilityLabel="उपयोग के निर्देश सुनें"
             accessibilityHint="इस बटन को दबाने से आपको विस्तार से निर्देश सुनाई देंगे"
           >
-            <Text style={styles.instructionsButtonText}>🔊 निर्देश सुनें</Text>
+            <Text style={styles.instructionsButtonText}>Listen to Instructions</Text>
           </TouchableOpacity>
           
           <View style={styles.instructionContainer}>
@@ -655,119 +657,130 @@ export default function BrailleScreen() {
 }
 
 // ======================
-// Styles (with new voice button styles)
+// Styles - Clean White & Blue Theme
 // ======================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
   },
+
+  // Header styles
   header: {
-    backgroundColor: '#1e40af',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    backgroundColor: '#ffffff',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 24,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   appTitle: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 6,
-    paddingTop: 15,
+    color: '#3b82f6',
+    marginBottom: 8,
     textAlign: 'center',
   },
   appSubtitle: {
     fontSize: 18,
-    color: '#dbeafe',
+    color: '#64748b',
     marginBottom: 6,
     textAlign: 'center',
+    fontWeight: '500',
   },
   appDescription: {
     fontSize: 14,
-    color: '#bfdbfe',
+    color: '#94a3b8',
     textAlign: 'center',
     paddingHorizontal: 20,
     marginBottom: 16,
   },
   voiceButton: {
-    backgroundColor: '#059669',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    backgroundColor: '#3b82f6',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 24,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
   voiceButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
   },
+
+  // Content styles
   content: {
     flex: 1,
+    backgroundColor: '#ffffff',
   },
   contentContainer: {
-    padding: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
   },
+
+  // Section styles
   section: {
-    marginBottom: 32,
+    marginBottom: 40,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#1e293b',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   sectionDescription: {
     fontSize: 16,
     color: '#64748b',
-    marginBottom: 20,
+    marginBottom: 24,
     lineHeight: 24,
   },
+
+  // Button styles
   buttonContainer: {
     gap: 16,
   },
   button: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    minHeight: 56,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    minHeight: 60,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   buttonPrimary: {
-    backgroundColor: '#1e40af',
+    backgroundColor: '#3b82f6',
   },
   buttonSecondary: {
     backgroundColor: '#ffffff',
     borderWidth: 2,
-    borderColor: '#1e40af',
+    borderColor: '#3b82f6',
   },
   buttonSuccess: {
-    backgroundColor: '#059669',
+    backgroundColor: '#10b981',
   },
   buttonDisabled: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#f1f5f9',
     shadowOpacity: 0,
     elevation: 0,
   },
   buttonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -775,93 +788,114 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   buttonTextSecondary: {
-    color: '#1e40af',
+    color: '#3b82f6',
   },
   buttonIcon: {
-    fontSize: 18,
+    fontSize: 20,
   },
+
+  // Input styles
   inputContainer: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: '#e2e8f0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   textInput: {
-    minHeight: 120,
-    padding: 16,
-    fontSize: 16,
+    minHeight: 140,
+    padding: 20,
+    fontSize: 18,
     color: '#1e293b',
-    lineHeight: 24,
+    lineHeight: 26,
     textAlignVertical: 'top',
   },
+
+  // Processing styles
   processingContainer: {
     backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    borderWidth: 1,
     borderColor: '#e2e8f0',
-    padding: 24,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 32,
     alignItems: 'center',
     marginBottom: 24,
   },
   processingText: {
     fontSize: 16,
-    color: '#1e40af',
+    color: '#3b82f6',
     fontWeight: '600',
-    marginTop: 12,
+    marginTop: 16,
     textAlign: 'center',
   },
   processingSubtext: {
     fontSize: 14,
     color: '#64748b',
-    marginTop: 4,
+    marginTop: 8,
     textAlign: 'center',
   },
+
+  // Text display styles
   textDisplayContainer: {
     backgroundColor: '#f8fafc',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   textScrollView: {
-    maxHeight: 150,
-    padding: 16,
+    maxHeight: 160,
+    padding: 20,
   },
   extractedText: {
     fontSize: 16,
     color: '#334155',
     lineHeight: 24,
   },
+
+  // Braille output styles
   brailleContainer: {
     backgroundColor: '#eff6ff',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: '#bfdbfe',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   brailleScrollView: {
     maxHeight: 200,
-    padding: 16,
+    padding: 20,
   },
   brailleText: {
-    fontSize: 28,
+    fontSize: 32,
     color: '#1e40af',
-    lineHeight: 40,
+    lineHeight: 48,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '500',
   },
+
+  // Instructions styles
   instructionsButton: {
-    backgroundColor: '#f59e0b',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    backgroundColor: '#3b82f6',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
+    marginBottom: 20,
+    shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -872,28 +906,33 @@ const styles = StyleSheet.create({
   },
   instructionContainer: {
     backgroundColor: '#f8fafc',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    padding: 20,
+    padding: 24,
   },
   instructionStep: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 24,
     alignItems: 'flex-start',
   },
   stepNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1e40af',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#3b82f6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 20,
     marginTop: 2,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   stepNumberText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#ffffff',
   },
@@ -901,14 +940,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stepTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#1e293b',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   stepDescription: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#64748b',
-    lineHeight: 20,
+    lineHeight: 24,
   },
 });

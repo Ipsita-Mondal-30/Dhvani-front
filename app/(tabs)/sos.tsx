@@ -159,12 +159,12 @@ const SOSScreen = () => {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'sms sent':
-        return '#10B981'; // Green
+        return '#059669'; // Green
       case 'sms failed':
       case 'error':
-        return '#EF4444'; // Red
+        return '#DC2626'; // Red
       case 'permission denied':
-        return '#F59E0B'; // Yellow
+        return '#D97706'; // Orange
       default:
         return '#6B7280'; // Gray
     }
@@ -248,182 +248,459 @@ const SOSScreen = () => {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar barStyle="light-content" backgroundColor="#DC2626" />
       
       {/* Simple Hamburger Menu */}
       <SimpleHamburgerMenu />
       
-      {/* Header */}
+      {/* Header - More spacious and accessible */}
       <LinearGradient
-        colors={['#DC2626', '#B91C1C', '#991B1B']}
-        className="pt-12 pb-8 px-6"
+        colors={['#DC2626', '#B91C1C']}
+        style={{
+          paddingTop: 60,
+          paddingBottom: 40,
+          paddingHorizontal: 32,
+        }}
       >
-        <View className="items-center">
-          <Ionicons name="warning" size={32} color="white" />
-          <Text className="text-2xl font-bold text-white mt-2 mb-1">Emergency SOS</Text>
-          <Text className="text-sm text-red-100 text-center">
+        <View style={{ alignItems: 'center' }}>
+          <Ionicons name="warning" size={48} color="white" />
+          <Text style={{
+            fontSize: 32,
+            fontWeight: 'bold',
+            color: 'white',
+            marginTop: 16,
+            marginBottom: 8,
+            textAlign: 'center'
+          }}>
+            Emergency SOS
+          </Text>
+          <Text style={{
+            fontSize: 18,
+            color: '#FEE2E2',
+            textAlign: 'center',
+            lineHeight: 24,
+            paddingHorizontal: 16
+          }}>
             Send your location to emergency contacts
           </Text>
         </View>
       </LinearGradient>
 
-      <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
-        {/* Last Emergency Message Display */}
+      <ScrollView 
+        style={{ flex: 1 }} 
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Last Emergency Message Display - More prominent */}
         {lastEmergencyMessage && (
-          <View className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-            <View className="flex-row items-center mb-2">
-              <Ionicons name="mail-outline" size={20} color="#3B82F6" />
-              <Text className="ml-2 font-semibold text-blue-800">Last Emergency Message</Text>
+          <View style={{
+            backgroundColor: '#EFF6FF',
+            borderWidth: 2,
+            borderColor: '#DBEAFE',
+            borderRadius: 16,
+            padding: 24,
+            marginBottom: 32
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Ionicons name="mail-outline" size={24} color="#2563EB" />
+              <Text style={{
+                marginLeft: 12,
+                fontSize: 18,
+                fontWeight: '600',
+                color: '#1E40AF'
+              }}>
+                Last Emergency Message
+              </Text>
             </View>
-            <Text className="text-sm text-blue-700 leading-5">{lastEmergencyMessage}</Text>
+            <Text style={{
+              fontSize: 16,
+              color: '#1E40AF',
+              lineHeight: 24,
+              marginBottom: 16
+            }}>
+              {lastEmergencyMessage}
+            </Text>
             <TouchableOpacity
               onPress={() => showEmergencyMessage(lastEmergencyMessage)}
-              className="mt-2 px-3 py-1 bg-blue-100 rounded-full self-start"
+              style={{
+                backgroundColor: '#DBEAFE',
+                paddingHorizontal: 20,
+                paddingVertical: 12,
+                borderRadius: 12,
+                alignSelf: 'flex-start'
+              }}
             >
-              <Text className="text-xs font-medium text-blue-600">View Full Message</Text>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: '#2563EB'
+              }}>
+                View Full Message
+              </Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Emergency Button */}
-        <View className="items-center mb-8">
+        {/* Emergency Button - Larger and more accessible */}
+        <View style={{ alignItems: 'center', marginBottom: 48 }}>
           <TouchableOpacity
             onPress={handleSOSPress}
             disabled={isSending}
-            className={`w-48 h-48 rounded-full items-center justify-center ${isSending ? 'opacity-70' : ''}`}
             style={{
+              width: 240,
+              height: 240,
+              borderRadius: 120,
               backgroundColor: '#DC2626',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: isSending ? 0.7 : 1,
               shadowColor: "#DC2626",
-              shadowOffset: { width: 0, height: 8 },
+              shadowOffset: { width: 0, height: 12 },
               shadowOpacity: 0.4,
-              shadowRadius: 16,
-              elevation: 12,
+              shadowRadius: 20,
+              elevation: 16,
+              marginBottom: 24
             }}
             accessibilityRole="button"
             accessibilityLabel="Emergency SOS Button"
             accessibilityHint="Double tap to send emergency location to contacts"
           >
             {isSending ? (
-              <View className="items-center">
+              <View style={{ alignItems: 'center' }}>
                 <ActivityIndicator size="large" color="white" />
-                <Text className="text-white font-bold mt-2">Sending...</Text>
+                <Text style={{
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: 18,
+                  marginTop: 12
+                }}>
+                  Sending...
+                </Text>
               </View>
             ) : (
-              <View className="items-center">
-                <Ionicons name="call" size={48} color="white" />
-                <Text className="text-white font-bold text-xl mt-2">SOS</Text>
-                <Text className="text-white text-sm">Emergency</Text>
+              <View style={{ alignItems: 'center' }}>
+                <Ionicons name="call" size={64} color="white" />
+                <Text style={{
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: 28,
+                  marginTop: 12
+                }}>
+                  SOS
+                </Text>
+                <Text style={{
+                  color: 'white',
+                  fontSize: 16,
+                  marginTop: 4
+                }}>
+                  Emergency
+                </Text>
               </View>
             )}
           </TouchableOpacity>
           
-          <Text className="text-gray-600 text-center mt-4 px-4">
+          <Text style={{
+            color: '#4B5563',
+            textAlign: 'center',
+            fontSize: 18,
+            lineHeight: 28,
+            paddingHorizontal: 16,
+            maxWidth: 400
+          }}>
             Tap the button above to send your current location to emergency contacts via SMS. If no contacts are configured, emergency services will be called automatically.
           </Text>
         </View>
 
-        {/* Manual Emergency Call Button */}
-        <View className="items-center mb-6">
+        {/* Manual Emergency Call Button - More prominent */}
+        <View style={{ alignItems: 'center', marginBottom: 48 }}>
           <TouchableOpacity
             onPress={callEmergencyManually}
-            className="px-6 py-3 bg-red-100 border-2 border-red-300 rounded-xl"
+            style={{
+              backgroundColor: '#FEF2F2',
+              borderWidth: 2,
+              borderColor: '#FECACA',
+              paddingHorizontal: 32,
+              paddingVertical: 20,
+              borderRadius: 16,
+              minWidth: 200
+            }}
             accessibilityRole="button"
             accessibilityLabel="Call emergency services manually"
           >
-            <View className="flex-row items-center">
-              <Ionicons name="call" size={18} color="#DC2626" />
-              <Text className="ml-2 font-semibold text-red-700">Call 911 Manually</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="call" size={24} color="#DC2626" />
+              <Text style={{
+                marginLeft: 12,
+                fontWeight: '600',
+                color: '#B91C1C',
+                fontSize: 18
+              }}>
+                Call 911 Manually
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
 
-        {/* Instructions */}
-        <View className="bg-white rounded-xl p-6 mb-6 border border-gray-100 shadow-sm">
-          <Text className="text-lg font-bold text-gray-900 mb-4">How it works:</Text>
+        {/* Instructions - More spacious and readable */}
+        <View style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 20,
+          padding: 32,
+          marginBottom: 32,
+          borderWidth: 1,
+          borderColor: '#F3F4F6',
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+          elevation: 4
+        }}>
+          <Text style={{
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: '#111827',
+            marginBottom: 24,
+            textAlign: 'center'
+          }}>
+            How it works:
+          </Text>
           
-          <View className="space-y-3">
-            <View className="flex-row items-start">
-              <View className="w-6 h-6 bg-red-100 rounded-full items-center justify-center mr-3 mt-0.5">
-                <Text className="text-red-600 text-xs font-bold">1</Text>
+          <View style={{ gap: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{
+                width: 40,
+                height: 40,
+                backgroundColor: '#FEE2E2',
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 20,
+                marginTop: 4
+              }}>
+                <Text style={{
+                  color: '#DC2626',
+                  fontSize: 18,
+                  fontWeight: 'bold'
+                }}>
+                  1
+                </Text>
               </View>
-              <Text className="flex-1 text-gray-700">Gets your current location with GPS</Text>
+              <Text style={{
+                flex: 1,
+                color: '#374151',
+                fontSize: 18,
+                lineHeight: 28
+              }}>
+                Gets your current location with GPS
+              </Text>
             </View>
             
-            <View className="flex-row items-start">
-              <View className="w-6 h-6 bg-red-100 rounded-full items-center justify-center mr-3 mt-0.5">
-                <Text className="text-red-600 text-xs font-bold">2</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{
+                width: 40,
+                height: 40,
+                backgroundColor: '#FEE2E2',
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 20,
+                marginTop: 4
+              }}>
+                <Text style={{
+                  color: '#DC2626',
+                  fontSize: 18,
+                  fontWeight: 'bold'
+                }}>
+                  2
+                </Text>
               </View>
-              <Text className="flex-1 text-gray-700">Sends SMS with location link to emergency contacts</Text>
+              <Text style={{
+                flex: 1,
+                color: '#374151',
+                fontSize: 18,
+                lineHeight: 28
+              }}>
+                Sends SMS with location link to emergency contacts
+              </Text>
             </View>
             
-            <View className="flex-row items-start">
-              <View className="w-6 h-6 bg-red-100 rounded-full items-center justify-center mr-3 mt-0.5">
-                <Text className="text-red-600 text-xs font-bold">3</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{
+                width: 40,
+                height: 40,
+                backgroundColor: '#FEE2E2',
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 20,
+                marginTop: 4
+              }}>
+                <Text style={{
+                  color: '#DC2626',
+                  fontSize: 18,
+                  fontWeight: 'bold'
+                }}>
+                  3
+                </Text>
               </View>
-              <Text className="flex-1 text-gray-700">Logs the emergency event for your records</Text>
+              <Text style={{
+                flex: 1,
+                color: '#374151',
+                fontSize: 18,
+                lineHeight: 28
+              }}>
+                Logs the emergency event for your records
+              </Text>
             </View>
           </View>
         </View>
 
-        {/* SOS History */}
-        <View className="bg-white rounded-xl p-6 mb-6 border border-gray-100 shadow-sm">
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-lg font-bold text-gray-900">Recent SOS Events</Text>
-            <TouchableOpacity onPress={loadSOSHistory} disabled={isLoadingHistory}>
+        {/* SOS History - More accessible layout */}
+        <View style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 20,
+          padding: 32,
+          marginBottom: 32,
+          borderWidth: 1,
+          borderColor: '#F3F4F6',
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+          elevation: 4
+        }}>
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 24
+          }}>
+            <Text style={{
+              fontSize: 24,
+              fontWeight: 'bold',
+              color: '#111827'
+            }}>
+              Recent SOS Events
+            </Text>
+            <TouchableOpacity 
+              onPress={loadSOSHistory} 
+              disabled={isLoadingHistory}
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                backgroundColor: '#F9FAFB'
+              }}
+            >
               <Ionicons 
                 name="refresh" 
-                size={20} 
+                size={24} 
                 color={isLoadingHistory ? "#9CA3AF" : "#6B7280"} 
               />
             </TouchableOpacity>
           </View>
           
           {isLoadingHistory ? (
-            <View className="items-center py-4">
-              <ActivityIndicator size="small" color="#6B7280" />
-              <Text className="text-gray-500 mt-2">Loading history...</Text>
+            <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+              <ActivityIndicator size="large" color="#DC2626" />
+              <Text style={{
+                color: '#6B7280',
+                marginTop: 16,
+                fontSize: 16
+              }}>
+                Loading history...
+              </Text>
             </View>
           ) : sosHistory.length > 0 ? (
-            <View className="space-y-3">
+            <View style={{ gap: 16 }}>
               {sosHistory.slice(0, 5).map((log) => (
                 <TouchableOpacity
                   key={log.id}
                   onPress={() => openLocationInMaps(log.latitude, log.longitude)}
-                  className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  style={{
+                    padding: 20,
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB'
+                  }}
                 >
-                  <View className="flex-row items-center justify-between mb-1">
-                    <View className="flex-row items-center">
-                      <View 
-                        className="w-3 h-3 rounded-full mr-2"
-                        style={{ backgroundColor: getStatusColor(log.status) }}
-                      />
-                      <Text className="font-semibold text-gray-900">{log.status}</Text>
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 12
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: 8,
+                        backgroundColor: getStatusColor(log.status),
+                        marginRight: 12
+                      }} />
+                      <Text style={{
+                        fontWeight: '600',
+                        color: '#111827',
+                        fontSize: 16
+                      }}>
+                        {log.status}
+                      </Text>
                     </View>
-                    <Text className="text-xs text-gray-500">
+                    <Text style={{
+                      fontSize: 14,
+                      color: '#6B7280'
+                    }}>
                       {formatTimestamp(log.timestamp)}
                     </Text>
                   </View>
-                  <Text className="text-sm text-gray-600">
+                  <Text style={{
+                    fontSize: 16,
+                    color: '#4B5563',
+                    lineHeight: 24
+                  }}>
                     📍 {log.latitude.toFixed(4)}, {log.longitude.toFixed(4)}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
           ) : (
-            <Text className="text-gray-500 text-center py-4">
+            <Text style={{
+              color: '#6B7280',
+              textAlign: 'center',
+              paddingVertical: 32,
+              fontSize: 18,
+              lineHeight: 28
+            }}>
               No SOS events recorded yet
             </Text>
           )}
         </View>
 
-        {/* Warning */}
-        <View className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8">
-          <View className="flex-row items-start">
-            <Ionicons name="warning-outline" size={20} color="#F59E0B" />
-            <View className="ml-3 flex-1">
-              <Text className="font-semibold text-yellow-800 mb-1">Important Notice</Text>
-              <Text className="text-sm text-yellow-700">
+        {/* Warning - More prominent and accessible */}
+        <View style={{
+          backgroundColor: '#FFFBEB',
+          borderWidth: 2,
+          borderColor: '#FDE68A',
+          borderRadius: 20,
+          padding: 32
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <Ionicons name="warning-outline" size={28} color="#D97706" />
+            <View style={{ marginLeft: 20, flex: 1 }}>
+              <Text style={{
+                fontWeight: '600',
+                color: '#92400E',
+                marginBottom: 12,
+                fontSize: 20
+              }}>
+                Important Notice
+              </Text>
+              <Text style={{
+                fontSize: 16,
+                color: '#92400E',
+                lineHeight: 26
+              }}>
                 This SOS feature is designed to assist in emergencies but should not replace calling emergency services (911, 112, etc.) in life-threatening situations.
               </Text>
             </View>
