@@ -16,10 +16,13 @@ import { useRouter } from 'expo-router';
 import SimpleHamburgerMenu from "@/src/components/SimpleHamburgerMenu";
 import { Ionicons } from '@expo/vector-icons';
 import { currencyAPI } from '../../lib/currency-api';
+import { useTranslation } from 'react-i18next';
+import { getSpeechLanguageCode } from '@/src/locales/i18n';
 
 type Denomination = 10 | 20 | 50 | 100 | 200 | 500 | 2000 | null;
 
 export default function CurrencyScreen(): JSX.Element {
+  const { t, i18n } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [cameraReady, setCameraReady] = useState(false);
@@ -61,7 +64,7 @@ export default function CurrencyScreen(): JSX.Element {
 
   const speak = (text: string) => {
     Speech.speak(text, {
-      language: 'en-US', // Currency detection is primarily in English
+      language: getSpeechLanguageCode(i18n.language),
       pitch: 1.1,
       rate: 0.9,
     });

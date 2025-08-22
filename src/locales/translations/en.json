@@ -27,8 +27,7 @@
     "title": "Dhvani",
     "subtitle": "Voice for Everyone",
     "welcome": "Welcome to Dhvani",
-    "description": "Your PDF to Text companion with voice accessibility features"
-  },
+    "description": "Designed especially for blind and visually impaired users, Dhvani is your companion for accessible communication through voice."  },
   "speech": {
     "title": "Speech",
     "uploadPdf": "Upload PDF",
@@ -173,7 +172,8 @@
     "cancelled": "SOS cancelled",
     "sendingNow": "Sending emergency SOS now. Please wait.",
     "sentSuccess": "Emergency SOS sent successfully. Help is on the way.",
-    "error": "Failed to send SOS. Please call emergency services directly."
+    "error": "Failed to send SOS. Please call emergency services directly.",
+    "countdown": "{{count}}"
   },
   "braille": {
     "title": "Text to Braille Converter",

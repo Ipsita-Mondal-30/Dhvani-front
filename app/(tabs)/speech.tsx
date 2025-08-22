@@ -17,6 +17,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as Speech from "expo-speech";
 import SimpleHamburgerMenu from "@/src/components/SimpleHamburgerMenu";
 import { useTranslation } from 'react-i18next';
+import { getSpeechLanguageCode } from '@/src/locales/i18n';
 
 // ======================
 // CONFIG — replace with your OCR.Space API key
@@ -26,7 +27,7 @@ const OCR_ENDPOINT = "https://api.ocr.space/parse/image";
 
 // ======================
 // Voice Messages (Hindi & English guidance)
-// ======================
+
 const VOICE_MESSAGES_HI = {
   welcome: "नमस्ते। आपका ध्वनि ऐप में स्वागत है। यह स्क्रीन आपके टेक्स्ट को सुनाकर बताएगी।",
   chooseInput:
@@ -66,6 +67,7 @@ const speakEn = (message: string) => {
   Speech.stop();
   Speech.speak(message, { language: "en-US", pitch: 1.0, rate: 1.0 });
 };
+
 const stopSpeaking = () => Speech.stop();
 
 // ======================
@@ -173,16 +175,18 @@ export default function SpeechScreen() {
 
   const M = i18n.language === 'hi' ? VOICE_MESSAGES_HI : VOICE_MESSAGES_EN;
 
+  // speak helper based on current language
+  const speakInCurrentLanguage = (message: string) => {
+    Speech.stop();
+    const languageCode = getSpeechLanguageCode(i18n.language);
+    Speech.speak(message, { language: languageCode, pitch: 1.0, rate: 0.95 });
+  };
+
   // announce on mount
   useEffect(() => {
     const tmr = setTimeout(() => {
-      if (i18n.language === 'hi') {
-        speakHi(M.welcome);
-        setTimeout(() => speakHi(M.chooseInput), 2600);
-      } else {
-        speakEn(M.welcome);
-        setTimeout(() => speakEn(M.chooseInput), 2600);
-      }
+      speakInCurrentLanguage(M.welcome);
+      setTimeout(() => speakInCurrentLanguage(M.chooseInput), 2600);
     }, 600);
     return () => {
       clearTimeout(tmr);
@@ -193,25 +197,18 @@ export default function SpeechScreen() {
   // speak helper based on chosen language
   const speak = (content: string) => {
     if (!content?.trim()) {
-      if (i18n.language === 'hi') {
-        speakHi(M.noContent);
-      } else {
-        speakEn(M.noContent);
-      }
+      speakInCurrentLanguage(M.noContent);
       Alert.alert(t('speechPage.noText'), t('speechPage.addTextFirst'));
-        return;
-      }
-    Speech.stop();
-    if (lang === "hi-IN") {
-      Speech.speak(content, { language: "hi-IN", pitch: 1.0, rate: 0.95 });
-      } else {
-      Speech.speak(content, { language: "en-US", pitch: 1.0, rate: 1.0 });
+      return;
     }
+    Speech.stop();
+    const languageCode = getSpeechLanguageCode(i18n.language);
+    Speech.speak(content, { language: languageCode, pitch: 1.0, rate: 0.95 });
   };
 
   const pickImage = async () => {
     stopSpeaking();
-    if (i18n.language === 'hi') speakHi(M.processing); else speakEn(M.processing);
+    speakInCurrentLanguage(M.processing);
     try {
       setBusy(true);
       setStatus(t('common.loading'));
@@ -222,7 +219,7 @@ export default function SpeechScreen() {
       if (res.canceled || !res.assets?.length) {
         setBusy(false);
         setStatus("");
-        if (i18n.language === 'hi') speakHi("फोटो नहीं चुनी गई।"); else speakEn("No image selected.");
+        speakInCurrentLanguage(i18n.language === 'hi' ? "फोटो नहीं चुनी गई।" : "No image selected.");
         return;
       }
       const asset = res.assets[0];
@@ -234,7 +231,7 @@ export default function SpeechScreen() {
       setStatus(t('common.loading'));
       const extracted = await ocrWithOcrSpaceAsync(file);
       if (!extracted) {
-        if (i18n.language === 'hi') speakHi(M.noContent); else speakEn(M.noContent);
+        speakInCurrentLanguage(M.noContent);
         setBusy(false);
         setStatus("");
         return;
@@ -242,12 +239,12 @@ export default function SpeechScreen() {
       setText(extracted);
       setBusy(false);
       setStatus("");
-      if (i18n.language === 'hi') speakHi(M.textFound); else speakEn(M.textFound);
+      speakInCurrentLanguage(M.textFound);
       setTimeout(() => speak(extracted), 900);
     } catch (e: any) {
       setBusy(false);
       setStatus("");
-      if (i18n.language === 'hi') speakHi("त्रुटि हुई।"); else speakEn("An error occurred.");
+      speakInCurrentLanguage(i18n.language === 'hi' ? "त्रुटि हुई।" : "An error occurred.");
       Alert.alert(
         "Image OCR Error",
         e?.message ?? "Could not extract text from the selected image."
@@ -257,7 +254,7 @@ export default function SpeechScreen() {
 
   const pickPdf = async () => {
     stopSpeaking();
-    if (i18n.language === 'hi') speakHi(M.processing); else speakEn(M.processing);
+    speakInCurrentLanguage(M.processing);
     try {
       setBusy(true);
       setStatus(t('common.loading'));
@@ -269,7 +266,7 @@ export default function SpeechScreen() {
       if (res.canceled || !res.assets?.length) {
         setBusy(false);
         setStatus("");
-        if (i18n.language === 'hi') speakHi("पीडीएफ नहीं चुनी गई।"); else speakEn("No PDF selected.");
+        speakInCurrentLanguage(i18n.language === 'hi' ? "पीडीएफ नहीं चुनी गई।" : "No PDF selected.");
         return;
       }
       const asset = res.assets[0];
@@ -277,7 +274,7 @@ export default function SpeechScreen() {
       setStatus(t('common.loading'));
       const extracted = await ocrWithOcrSpaceAsync(file);
       if (!extracted) {
-        if (i18n.language === 'hi') speakHi(M.noContent); else speakEn(M.noContent);
+        speakInCurrentLanguage(M.noContent);
         setBusy(false);
         setStatus("");
         return;
@@ -285,12 +282,12 @@ export default function SpeechScreen() {
       setText(extracted);
       setBusy(false);
       setStatus("");
-      if (i18n.language === 'hi') speakHi(M.textFound); else speakEn(M.textFound);
+      speakInCurrentLanguage(M.textFound);
       setTimeout(() => speak(extracted), 900);
     } catch (e: any) {
       setBusy(false);
       setStatus("");
-      if (i18n.language === 'hi') speakHi("त्रुटि हुई।"); else speakEn("An error occurred.");
+      speakInCurrentLanguage(i18n.language === 'hi' ? "त्रुटि हुई।" : "An error occurred.");
       Alert.alert(
         "PDF OCR Error",
         e?.message ?? "Could not extract text from the selected PDF."
@@ -299,13 +296,13 @@ export default function SpeechScreen() {
   };
 
   const handleTextFocus = () => {
-    if (i18n.language === 'hi') speakHi(M.typeText); else speakEn(M.typeText);
+    speakInCurrentLanguage(M.typeText);
   };
 
   const clearAll = () => {
     stopSpeaking();
     setText("");
-    if (i18n.language === 'hi') speakHi(t('speechPage.cleared')); else speakEn(t('speechPage.cleared'));
+    speakInCurrentLanguage(t('speechPage.cleared'));
   };
 
   const languageName = lang === "hi-IN" ? t('language.hindi') : t('language.english');
@@ -323,7 +320,7 @@ export default function SpeechScreen() {
           style={styles.helpBtn}
           onPress={() => {
             stopSpeaking();
-            if (i18n.language === 'hi') speakHi(M.instructions); else speakEn(M.instructions);
+            speakInCurrentLanguage(M.instructions);
           }}
           accessible
           accessibilityLabel={i18n.language === 'hi' ? "उपयोग का तरीका सुनें" : "Hear usage instructions"}
@@ -337,345 +334,314 @@ export default function SpeechScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        accessible
-        accessibilityLabel="Main content area"
       >
-        {/* Input actions */}
+        {/* Input Method Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('speechPage.chooseInput')}</Text>
-          <Text style={styles.sectionDesc}>
-            {t('speechPage.chooseInputDesc')}
-          </Text>
-
-          <View style={styles.buttonContainer}>
+          <Text style={styles.sectionDesc}>{t('speechPage.chooseInputDesc')}</Text>
+          
+          <View style={styles.buttonRow}>
             <AButton
               label={t('speechPage.selectImage')}
-              icon="📷"
               onPress={pickImage}
+              icon="📷"
               hint={t('speechPage.selectImage')}
               onFocusVoice={M.selectImage}
-              disabled={busy}
             />
             <AButton
               label={t('speechPage.selectPdf')}
-              icon="📄"
-              variant="secondary"
               onPress={pickPdf}
+              icon="📄"
               hint={t('speechPage.selectPdf')}
               onFocusVoice={M.selectPdf}
-              disabled={busy}
-                />
-              </View>
-            </View>
+            />
+          </View>
+        </View>
 
-        {/* Manual input */}
+        {/* Text Input */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('speechPage.typeYourText')}</Text>
           <Text style={styles.sectionDesc}>{t('speechPage.typeYourTextDesc')}</Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              multiline
-              placeholder={t('speechPage.placeholder')}
-              placeholderTextColor="#94a3b8"
-              value={text}
-              onChangeText={setText}
-              onFocus={handleTextFocus}
-              textAlignVertical="top"
-              accessible
-              accessibilityLabel="Text input"
-              accessibilityHint={t('speechPage.typeYourTextDesc')}
-            />
-              </View>
-            </View>
+          
+          <TextInput
+            style={styles.textInput}
+            value={text}
+            onChangeText={setText}
+            placeholder={t('speechPage.placeholder')}
+            placeholderTextColor="#64748b"
+            multiline
+            textAlignVertical="top"
+            onFocus={handleTextFocus}
+            accessible
+            accessibilityLabel={t('speechPage.typeYourText')}
+            accessibilityHint={t('speechPage.typeYourTextDesc')}
+          />
+        </View>
 
-        {/* Busy indicator */}
-        {busy && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-            {!!status && <Text style={styles.loadingText}>{status}</Text>}
-          </View>
-        )}
-
-        {/* Playback controls */}
+        {/* Playback Controls */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('speechPage.playbackControls')}</Text>
           
-          {/* Main play button */}
-          <View style={styles.buttonContainer}>
+          <View style={styles.buttonRow}>
             <AButton
-              label={`▶️ ${t('speechPage.playIn', { language: languageName })}`}
-              variant="success"
+              label={t('speechPage.playIn', { language: languageName })}
               onPress={() => speak(text)}
+              variant="success"
+              icon="▶️"
+              disabled={!text.trim() || busy}
               hint={t('speechPage.pressPlayHint')}
-              onFocusVoice={i18n.language === 'hi' ? "प्ले दबाने से टेक्स्ट सुनाई देगा।" : "Press play to hear the text."}
-              disabled={busy}
             />
             <AButton
-              label={`⏹️ ${t('speechPage.stop')}`}
-              variant="danger"
+              label={t('speechPage.stop')}
               onPress={stopSpeaking}
-              hint={t('speechPage.speechWillStop')}
-              onFocusVoice={i18n.language === 'hi' ? "स्पीच रोक दी जाएगी।" : t('speechPage.speechWillStop')}
-              />
-            </View>
-            
-          {/* Language selection */}
-          <View style={styles.languageSection}>
-            <Text style={styles.languageTitle}>{t('speechPage.languageSelection')}</Text>
-            <View style={styles.languageButtons}>
-              <AButton
-                label="🇮🇳 हिंदी"
-                onPress={() => {
-                  setLang("hi-IN");
-                  speakHi("भाषा हिंदी चुनी गई।");
-                }}
-                variant={lang === "hi-IN" ? "primary" : "secondary"}
-                hint={t('speechPage.languageSelection')}
-              />
-              <AButton
-                label="🇺🇸 English"
-                onPress={() => {
-                  setLang("en-US");
-                  speakEn("English language selected.");
-                }}
-                variant={lang === "en-US" ? "primary" : "secondary"}
-                hint={t('speechPage.languageSelection')}
-              />
-            </View>
-            </View>
-
-          {/* Clear button */}
-          <View style={styles.buttonContainer}>
-            <AButton
-              label={`🗑️ ${t('speechPage.clearText')}`}
               variant="secondary"
-              onPress={clearAll}
-              hint={t('speechPage.clearText')}
-              onFocusVoice={i18n.language === 'hi' ? "टेक्स्ट साफ करने के लिए दबाएं।" : t('speechPage.clearText')}
+              icon="⏹️"
+              hint={t('speechPage.speechWillStop')}
             />
           </View>
-            </View>
-            
-        {/* Preview of text */}
-        {!!text && (
+          
+          <View style={styles.buttonRow}>
+            <AButton
+              label={t('speechPage.clearText')}
+              onPress={clearAll}
+              variant="danger"
+              icon="🗑️"
+              disabled={!text.trim()}
+              hint={t('speechPage.cleared')}
+            />
+          </View>
+        </View>
+
+        {/* Language Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('speechPage.languageSelection')}</Text>
+          
+          <View style={styles.buttonRow}>
+            <AButton
+              label={t('language.hindi')}
+              onPress={() => setLang("hi-IN")}
+              variant={lang === "hi-IN" ? "success" : "secondary"}
+              icon="🇮🇳"
+              hint={t('language.hindi')}
+            />
+            <AButton
+              label={t('language.english')}
+              onPress={() => setLang("en-US")}
+              variant={lang === "en-US" ? "success" : "secondary"}
+              icon="🇺🇸"
+              hint={t('language.english')}
+            />
+          </View>
+        </View>
+
+        {/* Current Text Preview */}
+        {text.trim() && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('speechPage.currentTextPreview')}</Text>
-            <View style={styles.previewContainer}>
-              <ScrollView
-                style={styles.previewScroll}
-                accessible
-                accessibilityLabel={`Current text: ${text}`}
-              >
-                <Text style={styles.previewText}>{text}</Text>
-              </ScrollView>
-              </View>
-                </View>
+            <Text style={styles.previewText}>
+              {text.length > 200 ? `${text.substring(0, 200)}...` : text}
+            </Text>
+            <Text style={styles.charCount}>
+              {text.length} {t('speech.characters')}
+              {text.length > 5000 && (
+                <Text style={styles.warning}> ({t('speech.willBeTruncated')})</Text>
               )}
+            </Text>
+          </View>
+        )}
+
+        {/* Status */}
+        {status && (
+          <View style={styles.statusContainer}>
+            <ActivityIndicator size="large" color="#1e40af" />
+            <Text style={styles.statusText}>{status}</Text>
+          </View>
+        )}
       </ScrollView>
-            </View>
+    </View>
   );
 }
 
 // ======================
-// Styles - Clean White & Blue Theme
+// Accessible White & Blue Theme Styles
 // ======================
 const styles = StyleSheet.create({
-  container: { 
-                      flex: 1,
-    backgroundColor: "#ffffff" 
-  },
-
-  // Header styles
-  header: {
+  container: {
+    flex: 1,
     backgroundColor: "#ffffff",
-    paddingTop: Platform.OS === "ios" ? 60 : 40,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    borderBottomWidth: 1,
+  },
+  header: {
+    paddingTop: Platform.OS === "ios" ? 70 : 50,
+    paddingHorizontal: 28,
+    paddingBottom: 32,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 2,
     borderBottomColor: "#e2e8f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
-  title: { 
-    fontSize: 36, 
-    fontWeight: "700", 
-    color: "#3b82f6", 
+  title: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: "#1e40af",
     marginBottom: 8,
+    textAlign: "center",
   },
-  subtitle: { 
-    fontSize: 18, 
-    color: "#64748b",
-    fontWeight: "500",
+  subtitle: {
+    fontSize: 20,
+    color: "#475569",
+    marginBottom: 24,
+    textAlign: "center",
+    lineHeight: 28,
   },
   helpBtn: {
-    marginTop: 16,
-    backgroundColor: "#3b82f6",
-                      paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 24,
-    shadowColor: "#3b82f6",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  helpBtnText: { 
-    color: "#ffffff", 
-    fontSize: 16, 
-    fontWeight: "600" 
-  },
-
-  // Scroll view styles
-  scrollView: { 
-                      flex: 1,
-    backgroundColor: "#ffffff",
-  },
-  scrollContent: { 
+    alignSelf: "center",
+    backgroundColor: "#dbeafe",
     paddingHorizontal: 24,
-    paddingVertical: 32,
-  },
-
-  // Section styles
-  section: { 
-    marginBottom: 40,
-  },
-  sectionTitle: { 
-    fontSize: 24, 
-    fontWeight: "700", 
-    color: "#1e293b", 
-    marginBottom: 12,
-  },
-  sectionDesc: { 
-    fontSize: 16, 
-    color: "#64748b", 
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-
-  // Button styles
-  buttonContainer: {
-    gap: 16,
-  },
-  btn: {
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    minHeight: 60,
-    alignItems: "center",
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#3b82f6",
+    minHeight: 56,
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  btnPrimary: { 
-    backgroundColor: "#3b82f6" 
-  },
-  btnSecondary: { 
-    backgroundColor: "#ffffff", 
-    borderWidth: 2, 
-    borderColor: "#3b82f6" 
-  },
-  btnSuccess: { 
-    backgroundColor: "#10b981" 
-  },
-  btnDanger: { 
-    backgroundColor: "#ef4444" 
-  },
-  btnDisabled: { 
-    backgroundColor: "#f1f5f9", 
-    shadowOpacity: 0,
-    elevation: 0 
-  },
-  btnText: { 
-                  fontSize: 18,
-    fontWeight: "600" 
-  },
-  btnTextPrimary: { 
-    color: "#ffffff" 
-  },
-  btnTextSecondary: { 
-    color: "#3b82f6" 
-  },
-
-  // Language section
-  languageSection: {
-    marginTop: 24,
-  },
-  languageTitle: {
+  helpBtnText: {
     fontSize: 18,
+    color: "#1e40af",
     fontWeight: "600",
-    color: "#1e293b",
-    marginBottom: 16,
+    textAlign: "center",
   },
-  languageButtons: {
-    flexDirection: "row",
-    gap: 16,
-    justifyContent: "space-between",
+  scrollView: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
   },
-
-  // Input styles
-  inputContainer: {
+  scrollContent: {
+    padding: 28,
+    paddingBottom: 40,
+  },
+  section: {
+    marginBottom: 40,
+    backgroundColor: "#ffffff",
+    padding: 24,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: "#e2e8f0",
-                    borderRadius: 16,
-    backgroundColor: "#ffffff",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  input: {
-    minHeight: 140,
-            padding: 20,
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1e40af",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  sectionDesc: {
     fontSize: 18,
-    color: "#1e293b",
-    lineHeight: 26,
-  },
-
-  // Loading styles
-  loadingContainer: {
-    backgroundColor: "#f8fafc",
-    borderColor: "#e2e8f0",
-                borderWidth: 1,
-    borderRadius: 16,
-    padding: 32,
-    alignItems: "center",
+    color: "#64748b",
     marginBottom: 24,
+    lineHeight: 26,
+    textAlign: "center",
   },
-  loadingText: { 
-    marginTop: 16, 
-    color: "#3b82f6", 
-    fontSize: 16,
-    fontWeight: "500" 
+  buttonRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
   },
-
-  // Preview styles
-  previewContainer: {
-    backgroundColor: "#f8fafc",
-                borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+  btn: {
+    flex: 1,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 64,
+    borderWidth: 2,
   },
-  previewScroll: { 
-    maxHeight: 200, 
+  btnPrimary: {
+    backgroundColor: "#3b82f6",
+    borderColor: "#1e40af",
+  },
+  btnSecondary: {
+    backgroundColor: "#f1f5f9",
+    borderColor: "#cbd5e1",
+  },
+  btnSuccess: {
+    backgroundColor: "#10b981",
+    borderColor: "#059669",
+  },
+  btnDanger: {
+    backgroundColor: "#ef4444",
+    borderColor: "#dc2626",
+  },
+  btnDisabled: {
+    opacity: 0.4,
+  },
+  btnText: {
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  btnTextPrimary: {
+    color: "#ffffff",
+  },
+  btnTextSecondary: {
+    color: "#475569",
+  },
+  textInput: {
+    borderWidth: 3,
+    borderColor: "#cbd5e1",
+    borderRadius: 12,
     padding: 20,
+    fontSize: 20,
+    color: "#1e293b",
+    minHeight: 160,
+    backgroundColor: "#ffffff",
+    textAlignVertical: "top",
+    lineHeight: 28,
   },
-  previewText: { 
-    fontSize: 16, 
-    color: "#334155", 
-    lineHeight: 24 
+  previewText: {
+    fontSize: 18,
+    color: "#475569",
+    lineHeight: 26,
+    backgroundColor: "#f8fafc",
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    marginBottom: 12,
+  },
+  charCount: {
+    fontSize: 16,
+    color: "#64748b",
+    textAlign: "right",
+    marginTop: 8,
+  },
+  warning: {
+    color: "#dc2626",
+    fontWeight: "600",
+  },
+  statusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "#dbeafe",
+    borderRadius: 16,
+    marginTop: 20,
+    borderWidth: 2,
+    borderColor: "#93c5fd",
+    minHeight: 80,
+  },
+  statusText: {
+    marginLeft: 16,
+    fontSize: 18,
+    color: "#1e40af",
+    fontWeight: "600",
   },
 });

@@ -277,7 +277,7 @@ const Index = () => {
     
     // Provide audio feedback
     const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
-    Speech.speak('Emergency detected. SOS will activate in 5 seconds. Tap screen to cancel.', {
+    Speech.speak(t('emergency.detected'), {
       language: languageCode,
       pitch: 1.1,
       rate: 0.9,
@@ -349,7 +349,7 @@ const Index = () => {
           executeSOS();
           return 0;
         }
-        Speech.speak(`${prev - 1}`, {
+        Speech.speak(t('emergency.countdown', { count: prev - 1 }), {
           language: lang,
           pitch: 1.2,
           rate: 1.0,
@@ -373,7 +373,7 @@ const Index = () => {
     setSOSCountdown(0);
     
     const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
-    Speech.speak('SOS cancelled', {
+    Speech.speak(t('emergency.cancelled'), {
       language: languageCode,
       pitch: 1.0,
       rate: 0.9,
@@ -396,7 +396,7 @@ const Index = () => {
     
     try {
       const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
-      Speech.speak("Sending emergency SOS now. Please wait.", {
+      Speech.speak(t('emergency.sendingNow'), {
         language: languageCode,
         pitch: 1.1,
         rate: 0.9,
@@ -411,7 +411,7 @@ const Index = () => {
           [{ text: "OK" }]
         );
         
-        Speech.speak("Emergency SOS sent successfully. Help is on the way.", {
+        Speech.speak(t('emergency.sentSuccess'), {
           language: languageCode,
           pitch: 1.0,
           rate: 0.8,
@@ -441,7 +441,7 @@ const Index = () => {
       setIsListening(false);
       cleanup();
       const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
-      Speech.speak("Voice monitoring disabled", {
+      Speech.speak(t('voice.monitoringDisabled'), {
         language: languageCode,
         pitch: 1.0,
         rate: 0.8,
@@ -451,7 +451,7 @@ const Index = () => {
       setIsListening(true);
       startVoiceMonitoring();
       const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
-      Speech.speak("Voice monitoring enabled. Say help help help for emergency.", {
+      Speech.speak(t('voice.monitoringEnabled'), {
         language: languageCode,
         pitch: 1.0,
         rate: 0.8,
