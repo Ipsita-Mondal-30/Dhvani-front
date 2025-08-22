@@ -33,30 +33,30 @@ const SimpleHamburgerMenu: React.FC = () => {
         switch (route) {
          
           case '/index':
-            router.push('/(tabs)/');
+            router.push('/');
             break;
           case '/speech':
-            router.push('/(tabs)/speech');
+            router.push('/speech');
             break;
           case '/braille':
-            router.push('/(tabs)/braille');
+            router.push('/braille');
             break;
           case '/settings':
-            router.push('/(tabs)/settings');
+            router.push('/settings');
             break;
           case '/sos':
-            router.push('/(tabs)/sos');
+            router.push('/sos');
             break;
           case '/currency':
-            router.push('/(tabs)/currency');
+            router.push('/currency');
             break;
           default:
-            router.push('/(tabs)/');
+            router.push('/');
         }
       } catch (error) {
         console.error('Navigation error:', error);
         // Fallback navigation
-        router.push('/(tabs)/');
+        router.push('/');
       }
     }, 100);
   };
@@ -118,7 +118,7 @@ const SimpleHamburgerMenu: React.FC = () => {
             onStartShouldSetResponder={() => true}
           >
             <Text style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 }}>
-              Navigation
+              {t('menu.title')}
             </Text>
             
             {menuItems.map((item, index) => (
@@ -149,7 +149,7 @@ const SimpleHamburgerMenu: React.FC = () => {
               }}
             >
               <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
-                Close
+                {t('menu.close')}
               </Text>
             </TouchableOpacity>
           </View>

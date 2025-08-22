@@ -18,18 +18,13 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as Speech from 'expo-speech';
 import SimpleHamburgerMenu from '@/src/components/SimpleHamburgerMenu';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
-// ======================
-// CONFIG — replace with your OCR.Space API key
-// ======================
 const OCR_SPACE_API_KEY = 'K86479850788957';
 const OCR_ENDPOINT = 'https://api.ocr.space/parse/image';
 
-// ======================
-// Hindi Voice Messages for Guidance
-// ======================
 const VOICE_MESSAGES = {
   welcome: 'नमस्ते। आपका ध्वनि ऐप में स्वागत है। यह ऐप टेक्स्ट को ब्रेल में बदलता है।',
   chooseInput: 'अब आप तीन तरीकों से टेक्स्ट जोड़ सकते हैं। पहला - फोटो से, दूसरा - पीडीएफ से, तीसरा - सीधे टाइप करके।',
@@ -47,9 +42,6 @@ const VOICE_MESSAGES = {
   instructions: 'उपयोग करने का तरीका: पहले फोटो, पीडीएफ चुनें या टेक्स्ट टाइप करें। फिर यह अपने आप ब्रेल में बदल जाएगा। अंत में आप इसे सेव कर सकते हैं।'
 };
 
-// ======================
-// Voice Helper Functions
-// ======================
 const speakHindi = (message: string) => {
   Speech.speak(message, {
     language: 'hi-IN',
@@ -63,9 +55,6 @@ const stopSpeaking = () => {
   Speech.stop();
 };
 
-// ======================
-// Very simple Grade-1 (uncontracted) English Braille mapper
-// ======================
 const BRAILLE_MAP: Record<string, string> = {
   a:'⠁', b:'⠃', c:'⠉', d:'⠙', e:'⠑', f:'⠋', g:'⠛', h:'⠓', i:'⠊', j:'⠚',
   k:'⠅', l:'⠇', m:'⠍', n:'⠝', o:'⠕', p:'⠏', q:'⠟', r:'⠗', s:'⠎', t:'⠞',
@@ -105,9 +94,6 @@ function toBrailleGrade1(input: string): string {
   return out;
 }
 
-// ======================
-// OCR helpers (OCR.Space)
-// ======================
 async function ocrWithOcrSpaceAsync(file: { uri: string; name?: string; type?: string }) {
   const form = new FormData();
   form.append('apikey', OCR_SPACE_API_KEY);
@@ -121,7 +107,7 @@ async function ocrWithOcrSpaceAsync(file: { uri: string; name?: string; type?: s
     uri: file.uri,
     name: file.name ?? (file.type?.includes('pdf') ? 'document.pdf' : 'image.jpg'),
     type: file.type ?? (file.uri.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
-  });
+  } as any);
   const res = await fetch(OCR_ENDPOINT, { method: 'POST', body: form as any });
   if (!res.ok) throw new Error(`OCR request failed (${res.status})`);
   const json = await res.json();
@@ -129,9 +115,6 @@ async function ocrWithOcrSpaceAsync(file: { uri: string; name?: string; type?: s
   return json.ParsedResults.map((r: any) => r.ParsedText ?? '').join('\n').trim();
 }
 
-// ======================
-// File save helpers
-// ======================
 async function saveBrailleFile(brailleText: string, baseName = 'braille-output') {
   const filename = `${baseName}.txt`;
   if (Platform.OS === 'android') {
@@ -154,9 +137,6 @@ async function saveBrailleFile(brailleText: string, baseName = 'braille-output')
   }
 }
 
-// ======================
-// Voice-Guided Accessible Button Component
-// ======================
 interface AccessibleButtonProps {
   label: string;
   onPress: () => void;
@@ -221,17 +201,14 @@ function AccessibleButton({
   );
 }
 
-// ======================
-// Main Component
-// ======================
 export default function BrailleScreen() {
+  const { t } = useTranslation();
   const [extractedText, setExtractedText] = useState('');
   const [braille, setBraille] = useState('');
   const [typedText, setTypedText] = useState('');
   const [busy, setBusy] = useState(false);
   const [currentAction, setCurrentAction] = useState('');
 
-  // Voice guidance on component mount
   useEffect(() => {
     const timer = setTimeout(() => {
       speakHindi(VOICE_MESSAGES.welcome);
@@ -249,58 +226,47 @@ export default function BrailleScreen() {
   const pickImage = async () => {
     stopSpeaking();
     speakHindi(VOICE_MESSAGES.processing);
-    
     try {
       setBusy(true);
-      setCurrentAction('Processing image and extracting text...');
-      
+      setCurrentAction(t('common.loading'));
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.8,
         allowsMultipleSelection: false,
       });
-      
       if (res.canceled || !res.assets?.length) {
         setBusy(false);
         setCurrentAction('');
         speakHindi('फोटो नहीं चुनी गई। कृपया दोबारा कोशिश करें।');
         return;
       }
-      
       const asset = res.assets[0];
       const file = { 
         uri: asset.uri, 
         name: asset.fileName ?? 'image.jpg', 
         type: asset.mimeType ?? 'image/jpeg' 
       };
-      
       const text = await ocrWithOcrSpaceAsync(file);
-      
       if (!text || text.trim().length === 0) {
         speakHindi(VOICE_MESSAGES.noContent);
         setBusy(false);
         setCurrentAction('');
         return;
       }
-      
       setExtractedText(text);
       setBraille(toBrailleGrade1(text));
       setTypedText('');
-      
       speakHindi(VOICE_MESSAGES.textFound);
       setTimeout(() => {
         speakHindi(VOICE_MESSAGES.brailleReady);
       }, 2000);
-      
       Alert.alert(
-        'Text Extracted Successfully', 
-        `Found ${text.length} characters. The text has been converted to Braille and is ready to view or save.`,
-        [{ text: 'OK', style: 'default' }]
+        t('common.success'), 
+        t('braille.extractedTextDesc')
       );
-      
     } catch (e: any) {
       speakHindi(VOICE_MESSAGES.error);
-      Alert.alert('Error Processing Image', e?.message ?? 'Could not extract text from the selected image. Please try a different image with clearer text.');
+      Alert.alert(t('common.error'), e?.message ?? 'Could not extract text from the selected image.');
     } finally {
       setBusy(false);
       setCurrentAction('');
@@ -310,58 +276,47 @@ export default function BrailleScreen() {
   const pickPdf = async () => {
     stopSpeaking();
     speakHindi(VOICE_MESSAGES.processing);
-    
     try {
       setBusy(true);
-      setCurrentAction('Processing PDF document and extracting text...');
-      
+      setCurrentAction(t('common.loading'));
       const res = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf'],
         multiple: false,
         copyToCacheDirectory: true,
       });
-      
       if (res.canceled || !res.assets?.length) {
         setBusy(false);
         setCurrentAction('');
         speakHindi('पीडीएफ नहीं चुनी गई। कृपया दोबारा कोशिश करें।');
         return;
       }
-      
       const asset = res.assets[0];
       const file = { 
         uri: asset.uri, 
         name: asset.name ?? 'document.pdf', 
         type: 'application/pdf' 
       };
-      
       const text = await ocrWithOcrSpaceAsync(file);
-      
       if (!text || text.trim().length === 0) {
         speakHindi(VOICE_MESSAGES.noContent);
         setBusy(false);
         setCurrentAction('');
         return;
       }
-      
       setExtractedText(text);
       setBraille(toBrailleGrade1(text));
       setTypedText('');
-      
       speakHindi(VOICE_MESSAGES.textFound);
       setTimeout(() => {
         speakHindi(VOICE_MESSAGES.brailleReady);
       }, 2000);
-      
       Alert.alert(
-        'PDF Processed Successfully', 
-        `Extracted ${text.length} characters from the PDF. The text has been converted to Braille and is ready to view or save.`,
-        [{ text: 'OK', style: 'default' }]
+        t('common.success'), 
+        t('braille.extractedTextDesc')
       );
-      
     } catch (e: any) {
       speakHindi(VOICE_MESSAGES.error);
-      Alert.alert('Error Processing PDF', e?.message ?? 'Could not extract text from the selected PDF. Please try a different PDF file.');
+      Alert.alert(t('common.error'), e?.message ?? 'Could not extract text from the selected PDF.');
     } finally {
       setBusy(false);
       setCurrentAction('');
@@ -370,36 +325,26 @@ export default function BrailleScreen() {
 
   const saveFile = async () => {
     stopSpeaking();
-    
     if (!braille) {
       speakHindi(VOICE_MESSAGES.noContent);
-      Alert.alert(
-        'Nothing to Save', 
-        'Please first select an image, PDF, or type some text to convert to Braille before saving.',
-        [{ text: 'OK', style: 'default' }]
-      );
+      Alert.alert(t('common.info'), t('braille.typeYourTextDesc'));
       return;
     }
-    
     try {
       await saveBrailleFile(braille);
       speakHindi(VOICE_MESSAGES.fileSaved);
     } catch (error) {
       speakHindi(VOICE_MESSAGES.error);
-      Alert.alert('Save Error', 'Could not save the Braille file. Please try again.');
+      Alert.alert(t('common.error'), t('common.error'));
     }
   };
 
   const handleTyping = (text: string) => {
     setTypedText(text);
     setBraille(toBrailleGrade1(text));
-    
-    // Clear OCR results when user starts typing
     if (text && extractedText) {
       setExtractedText('');
     }
-    
-    // Voice feedback when user starts typing
     if (text.length === 1 && !extractedText) {
       speakHindi('अच्छा! आप टाइप कर रहे हैं। यह तुरंत ब्रेल में बदल रहा है।');
     }
@@ -411,18 +356,16 @@ export default function BrailleScreen() {
 
   const clearAll = () => {
     stopSpeaking();
-    
     Alert.alert(
-      'Clear All Content',
-      'This will remove all extracted text, typed text, and Braille output. Are you sure?',
+      t('braille.clearAll'),
+      t('common.info'),
       [
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
-          onPress: () => speakHindi('रद्द कर दिया गया।')
         },
         {
-          text: 'Clear All',
+          text: t('braille.clearAll'),
           style: 'destructive',
           onPress: () => {
             setExtractedText('');
@@ -444,20 +387,15 @@ export default function BrailleScreen() {
     <View style={styles.container}>
       <SimpleHamburgerMenu/>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.appTitle}>Dhvani</Text>
-        <Text style={styles.appSubtitle}>Text to Braille Converter</Text>
-        <Text style={styles.appDescription}>Making text accessible through Braille conversion</Text>
-        
-        {/* Voice Control Button */}
+        <Text style={styles.appSubtitle}>{t('braille.title')}</Text>
+        <Text style={styles.appDescription}>{t('braille.description')}</Text>
         <TouchableOpacity 
           style={styles.voiceButton}
           onPress={speakInstructions}
           accessible={true}
-          accessibilityLabel="उपयोग का तरीका सुनें"
-          accessibilityHint="इस बटन को दबाने से आपको ऐप के उपयोग का तरीका सुनाई देगा"
+          accessibilityLabel={t('braille.listenInstructions')}
         >
           <Text style={styles.voiceButtonText}>Help</Text>
         </TouchableOpacity>
@@ -470,42 +408,37 @@ export default function BrailleScreen() {
         accessible={true}
         accessibilityLabel="Main content area"
       >
-        {/* Action Buttons Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Choose Input Method</Text>
+          <Text style={styles.sectionTitle}>{t('braille.chooseInput')}</Text>
           <Text style={styles.sectionDescription}>
-            Select how you want to add text for Braille conversion
+            {t('braille.chooseInputDesc')}
           </Text>
-          
           <View style={styles.buttonContainer}>
             <AccessibleButton
-              label="Select Image"
+              label={t('braille.selectImage')}
               onPress={pickImage}
               disabled={busy}
               icon="📷"
               voiceMessage={VOICE_MESSAGES.selectImage}
-              accessibilityHint="Opens camera roll to select an image with text to convert to Braille"
+              accessibilityHint={t('braille.selectImage')}
             />
-            
             <AccessibleButton
-              label="Select PDF"
+              label={t('braille.selectPdf')}
               onPress={pickPdf}
               disabled={busy}
               variant="secondary"
               icon="📄"
               voiceMessage={VOICE_MESSAGES.selectPdf}
-              accessibilityHint="Opens file picker to select a PDF document to extract text from"
+              accessibilityHint={t('braille.selectPdf')}
             />
           </View>
         </View>
 
-        {/* Manual Text Input Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Type Your Text</Text>
+          <Text style={styles.sectionTitle}>{t('braille.typeYourText')}</Text>
           <Text style={styles.sectionDescription}>
-            Enter the text you want to be converted to Braille
+            {t('braille.typeYourTextDesc')}
           </Text>
-          
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.textInput}
@@ -517,35 +450,32 @@ export default function BrailleScreen() {
               onFocus={handleTextInputFocus}
               accessible={true}
               accessibilityLabel="Text input field"
-              accessibilityHint="Type or paste text here. It will automatically be converted to Braille as you type"
+              accessibilityHint={t('braille.typeYourTextDesc')}
               textAlignVertical="top"
             />
           </View>
         </View>
 
-        {/* Processing Status */}
         {busy && (
           <View style={styles.processingContainer}>
             <ActivityIndicator size="large" color="#3b82f6" />
             <Text style={styles.processingText}>{currentAction}</Text>
-            <Text style={styles.processingSubtext}>Please wait while we process your request</Text>
+            <Text style={styles.processingSubtext}>{t('common.loading')}</Text>
           </View>
         )}
 
-        {/* Extracted Text Display */}
         {!!extractedText && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Extracted Text</Text>
+            <Text style={styles.sectionTitle}>{t('braille.extractedText')}</Text>
             <Text style={styles.sectionDescription}>
-              This is the text that was found in your image or PDF
+              {t('braille.extractedTextDesc')}
             </Text>
-            
             <View style={styles.textDisplayContainer}>
               <ScrollView 
                 style={styles.textScrollView}
                 accessible={true}
                 accessibilityLabel={`Extracted text content: ${extractedText}`}
-                accessibilityHint="This is the text that was extracted from your image or PDF"
+                accessibilityHint={t('braille.extractedTextDesc')}
               >
                 <Text style={styles.extractedText}>{extractedText}</Text>
               </ScrollView>
@@ -553,20 +483,18 @@ export default function BrailleScreen() {
           </View>
         )}
 
-        {/* Braille Output */}
         {!!braille && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Braille Output</Text>
+            <Text style={styles.sectionTitle}>{t('braille.brailleOutput')}</Text>
             <Text style={styles.sectionDescription}>
-              Grade-1 English Braille conversion of your text
+              {t('braille.brailleOutputDesc')}
             </Text>
-            
             <View style={styles.brailleContainer}>
               <ScrollView 
                 style={styles.brailleScrollView}
                 accessible={true}
                 accessibilityLabel="Braille text output"
-                accessibilityHint="This is your text converted to Grade-1 English Braille. You can save this to share with others"
+                accessibilityHint={t('braille.brailleOutputDesc')}
               >
                 <Text style={styles.brailleText}>{braille}</Text>
               </ScrollView>
@@ -574,78 +502,71 @@ export default function BrailleScreen() {
           </View>
         )}
 
-        {/* Action Buttons for Save/Clear */}
         {(braille || extractedText || typedText) && (
           <View style={styles.section}>
             <View style={styles.buttonContainer}>
               <AccessibleButton
-                label="Save Braille File"
+                label={t('braille.saveFile')}
                 onPress={saveFile}
                 variant="success"
                 icon="💾"
                 voiceMessage={VOICE_MESSAGES.saveFile}
-                accessibilityHint="Saves the Braille text to a file that you can share with others"
+                accessibilityHint={t('braille.saveFile')}
               />
-              
               <AccessibleButton
-                label="Clear All"
+                label={t('braille.clearAll')}
                 onPress={clearAll}
                 variant="secondary"
                 icon="🗑️"
                 voiceMessage={VOICE_MESSAGES.clearAll}
-                accessibilityHint="Clears all text and starts over"
+                accessibilityHint={t('braille.clearAll')}
               />
             </View>
           </View>
         )}
 
-        {/* Instructions Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>How to Use Dhvani</Text>
-          
+          <Text style={styles.sectionTitle}>{t('braille.howToUse')}</Text>
           <TouchableOpacity 
             style={styles.instructionsButton}
             onPress={speakInstructions}
             accessible={true}
-            accessibilityLabel="उपयोग के निर्देश सुनें"
-            accessibilityHint="इस बटन को दबाने से आपको विस्तार से निर्देश सुनाई देंगे"
+            accessibilityLabel={t('braille.listenInstructions')}
           >
-            <Text style={styles.instructionsButtonText}>Listen to Instructions</Text>
+            <Text style={styles.instructionsButtonText}>{t('braille.listenInstructions')}</Text>
           </TouchableOpacity>
-          
+        
           <View style={styles.instructionContainer}>
             <View style={styles.instructionStep}>
               <View style={styles.stepNumber}>
                 <Text style={styles.stepNumberText}>1</Text>
               </View>
               <View style={styles.stepContent}>
-                <Text style={styles.stepTitle}>Choose Your Input</Text>
+                <Text style={styles.stepTitle}>{t('braille.chooseInput')}</Text>
                 <Text style={styles.stepDescription}>
-                  Select an image or PDF with text, or type directly into the text field
+                  {t('braille.chooseInputDesc')}
                 </Text>
               </View>
             </View>
-            
             <View style={styles.instructionStep}>
               <View style={styles.stepNumber}>
                 <Text style={styles.stepNumberText}>2</Text>
               </View>
               <View style={styles.stepContent}>
-                <Text style={styles.stepTitle}>Automatic Conversion</Text>
+                <Text style={styles.stepTitle}>{t('braille.brailleOutput')}</Text>
                 <Text style={styles.stepDescription}>
-                  Dhvani will automatically convert your text to Grade-1 English Braille
+                  {t('braille.brailleOutputDesc')}
                 </Text>
               </View>
             </View>
-            
             <View style={styles.instructionStep}>
               <View style={styles.stepNumber}>
                 <Text style={styles.stepNumberText}>3</Text>
               </View>
               <View style={styles.stepContent}>
-                <Text style={styles.stepTitle}>Save and Share</Text>
+                <Text style={styles.stepTitle}>{t('braille.saveFile')}</Text>
                 <Text style={styles.stepDescription}>
-                  Save the Braille output as a text file to share with others or use with Braille devices
+                  {t('braille.saveFile')}
                 </Text>
               </View>
             </View>
@@ -656,16 +577,11 @@ export default function BrailleScreen() {
   );
 }
 
-// ======================
-// Styles - Clean White & Blue Theme
-// ======================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
   },
-
-  // Header styles
   header: {
     backgroundColor: '#ffffff',
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
@@ -718,8 +634,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
-  // Content styles
   content: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -728,8 +642,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 32,
   },
-
-  // Section styles
   section: {
     marginBottom: 40,
   },
@@ -745,8 +657,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 24,
   },
-
-  // Button styles
   buttonContainer: {
     gap: 16,
   },
@@ -793,8 +703,6 @@ const styles = StyleSheet.create({
   buttonIcon: {
     fontSize: 20,
   },
-
-  // Input styles
   inputContainer: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
@@ -814,8 +722,6 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     textAlignVertical: 'top',
   },
-
-  // Processing styles
   processingContainer: {
     backgroundColor: '#f8fafc',
     borderColor: '#e2e8f0',
@@ -838,8 +744,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
-
-  // Text display styles
   textDisplayContainer: {
     backgroundColor: '#f8fafc',
     borderRadius: 16,
@@ -860,8 +764,6 @@ const styles = StyleSheet.create({
     color: '#334155',
     lineHeight: 24,
   },
-
-  // Braille output styles
   brailleContainer: {
     backgroundColor: '#eff6ff',
     borderRadius: 16,
@@ -884,8 +786,6 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontWeight: '500',
   },
-
-  // Instructions styles
   instructionsButton: {
     backgroundColor: '#3b82f6',
     paddingVertical: 14,
