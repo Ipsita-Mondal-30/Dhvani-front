@@ -87,12 +87,13 @@ const Index = () => {
   // Voice recognition variables and refs
   const speechBuffer = useRef<string[]>([]);
   const lastSpeechTime = useRef<number>(0);
-  const sosTimer = useRef<NodeJS.Timeout | null>(null);
-  const listeningTimer = useRef<NodeJS.Timeout | null>(null);
-  const countdownInterval = useRef<NodeJS.Timeout | null>(null);
-  const appState = useRef<AppStateStatus>(AppState.currentState);
+  const sosTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listeningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const appState = useRef(AppState.currentState);
 
-  const welcomeMessage = t('home.description');
+  // Add null check for translation
+  const welcomeMessage = t('home.description') || 'Welcome to Dhvani - Your Text to Speech Assistant';
 
   const cleanup = () => {
     if (sosTimer.current) {
@@ -108,7 +109,9 @@ const Index = () => {
       countdownInterval.current = null;
     }
     if (recording) {
-      recording.stopAndUnloadAsync();
+      recording.stopAndUnloadAsync().catch(error => {
+        console.error('Error stopping recording:', error);
+      });
       setRecording(null);
     }
     setIsListening(false);
@@ -116,6 +119,7 @@ const Index = () => {
     setIsSosMode(false);
   };
 
+  // Handle app state changes for background voice monitoring
   const handleAppStateChange = (nextAppState: AppStateStatus) => {
     if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
       if (isListening) {
@@ -129,6 +133,12 @@ const Index = () => {
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
+        console.log('🎤 Microphone permission denied');
+        Alert.alert(
+          'Permission Required',
+          'Microphone access is needed for voice-activated SOS features.',
+          [{ text: 'OK' }]
+        );
         return;
       }
 
@@ -140,6 +150,7 @@ const Index = () => {
       startListeningContinuous();
     } catch (error) {
       console.error('❌ Failed to start voice monitoring:', error);
+      setIsListening(false);
     }
   };
 
@@ -167,6 +178,8 @@ const Index = () => {
   };
 
   const startListeningContinuous = async () => {
+    if (!isListening) return;
+
     try {
       if (recording) {
         await recording.stopAndUnloadAsync();
@@ -174,58 +187,74 @@ const Index = () => {
       }
 
       const { recording: newRecording } = await Audio.Recording.createAsync(recordingOptions);
-
       setRecording(newRecording);
-      setIsListening(true);
 
       listeningTimer.current = setTimeout(() => {
         if (newRecording) {
           processAudio(newRecording);
         }
-      }, 3000) as unknown as NodeJS.Timeout;
+      }, 3000) as ReturnType<typeof setTimeout>;
 
     } catch (error) {
       console.error('❌ Failed to start recording:', error);
-      setTimeout(startListeningContinuous, 2000) as unknown as NodeJS.Timeout;
+      setRecording(null);
+      // Retry after a delay if still listening
+      if (isListening) {
+        setTimeout(startListeningContinuous, 2000);
+      }
     }
   };
 
   const processAudio = async (audioRecording: Audio.Recording) => {
     try {
+      if (!audioRecording) return;
+
       await audioRecording.stopAndUnloadAsync();
       const uri = audioRecording.getURI();
       
       if (uri) {
         const transcription = await simulateTranscription(uri);
-        setSoundTranscription(transcription);
-        if (checkForSOSPattern(transcription)) {
-          triggerVoiceActivatedSOS();
+        if (transcription) {
+          setSoundTranscription(transcription);
+          
+          // Check if any SOS patterns match
+          if (checkForSOSPattern(transcription)) {
+            triggerVoiceActivatedSOS();
+          }
         }
       }
 
       setRecording(null);
 
       if (isListening) {
-        setTimeout(startListeningContinuous, 1000) as unknown as NodeJS.Timeout;
+        setTimeout(startListeningContinuous, 1000);
       }
     } catch (error) {
       console.error('❌ Failed to process audio:', error);
       setRecording(null);
       if (isListening) {
-        setTimeout(startListeningContinuous, 2000) as unknown as NodeJS.Timeout;
+        setTimeout(startListeningContinuous, 2000);
       }
     }
   };
 
   const simulateTranscription = async (uri: string): Promise<string> => {
-    const random = Math.random();
-    if (random < 0.02) {
-      return SOS_VOICE_PATTERNS[0];
+    try {
+      // For demonstration, randomly return an SOS phrase occasionally
+      const random = Math.random();
+      if (random < 0.02) { // 2% chance for testing
+        return SOS_VOICE_PATTERNS[0]; // 'help help help'
+      }
+      return '';
+    } catch (error) {
+      console.error('Error in transcription simulation:', error);
+      return '';
     }
-    return '';
   };
 
   const checkForSOSPattern = (transcription: string): boolean => {
+    if (!transcription || typeof transcription !== 'string') return false;
+    
     const lowerTranscription = transcription.toLowerCase();
     return SOS_VOICE_PATTERNS.some(pattern => 
       lowerTranscription.includes(pattern.toLowerCase())
@@ -233,9 +262,18 @@ const Index = () => {
   };
 
   const triggerVoiceActivatedSOS = () => {
-    const lang = getSpeechLanguageCode(i18n.language);
-    Speech.speak(t('emergency.detected'), {
-      language: lang,
+    console.log('🎤🚨 Voice-activated SOS detected!');
+    
+    // Stop any existing countdown
+    if (countdownInterval.current) {
+      clearInterval(countdownInterval.current);
+      countdownInterval.current = null;
+    }
+    
+    // Provide audio feedback
+    const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
+    Speech.speak('Emergency detected. SOS will activate in 5 seconds. Tap screen to cancel.', {
+      language: languageCode,
       pitch: 1.1,
       rate: 0.9,
     });
@@ -255,11 +293,15 @@ const Index = () => {
         }
         return prev - 1;
       });
-    }, 1000) as unknown as NodeJS.Timeout;
+    }, 1000) as ReturnType<typeof setInterval>;
 
+    // Auto-activate after 5 seconds if not cancelled
+    if (sosTimer.current) {
+      clearTimeout(sosTimer.current);
+    }
     sosTimer.current = setTimeout(() => {
       executeSOS();
-    }, 5000) as unknown as NodeJS.Timeout;
+    }, 5000) as ReturnType<typeof setTimeout>;
   };
 
   const triggerEmergencySOS = async () => {
@@ -287,6 +329,11 @@ const Index = () => {
     setIsSosMode(true);
     
     const lang = getSpeechLanguageCode(i18n.language);
+    
+    if (countdownInterval.current) {
+      clearInterval(countdownInterval.current);
+    }
+    
     countdownInterval.current = setInterval(() => {
       setSOSCountdown(prev => {
         if (prev <= 1) {
@@ -304,7 +351,7 @@ const Index = () => {
         });
         return prev - 1;
       });
-    }, 1000) as unknown as NodeJS.Timeout;
+    }, 1000) as ReturnType<typeof setInterval>;
   };
 
   const cancelSOS = () => {
@@ -320,8 +367,9 @@ const Index = () => {
     setIsSosMode(false);
     setSOSCountdown(0);
     
-    Speech.speak(t('emergency.cancelled'), {
-      language: getSpeechLanguageCode(i18n.language),
+    const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
+    Speech.speak('SOS cancelled', {
+      language: languageCode,
       pitch: 1.0,
       rate: 0.9,
     });
@@ -342,31 +390,32 @@ const Index = () => {
     }
     
     try {
-      Speech.speak(t('emergency.sendingNow'), {
-        language: getSpeechLanguageCode(i18n.language),
+      const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
+      Speech.speak("Sending emergency SOS now. Please wait.", {
+        language: languageCode,
         pitch: 1.1,
         rate: 0.9,
       });
 
       const result = await SOSService.sendSOS();
       
-      if (result.success) {
+      if (result && result.success) {
         Alert.alert(
-          t('emergency.title'), 
-          result.message,
-          [{ text: t('common.ok') }]
+          "Emergency SOS Sent",
+          result.message || "Emergency services have been notified.",
+          [{ text: "OK" }]
         );
         
-        Speech.speak(t('emergency.sentSuccess'), {
-          language: getSpeechLanguageCode(i18n.language),
+        Speech.speak("Emergency SOS sent successfully. Help is on the way.", {
+          language: languageCode,
           pitch: 1.0,
           rate: 0.8,
         });
       } else {
         Alert.alert(
-          t('common.error'),
-          result.message,
-          [{ text: t('common.ok') }]
+          "SOS Failed",
+          (result && result.message ? result.message : "Failed to send SOS") + "\n\nTrying to call emergency services directly.",
+          [{ text: "OK" }]
         );
         await SOSService.callEmergencyServices();
       }
@@ -386,15 +435,19 @@ const Index = () => {
     if (isListening) {
       setIsListening(false);
       cleanup();
-      Speech.speak(t('voice.monitoringDisabled'), {
-        language: getSpeechLanguageCode(i18n.language),
+      const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
+      Speech.speak("Voice monitoring disabled", {
+        language: languageCode,
         pitch: 1.0,
         rate: 0.8,
       });
     } else {
+      // Start listening
+      setIsListening(true);
       startVoiceMonitoring();
-      Speech.speak(t('voice.monitoringEnabled'), {
-        language: getSpeechLanguageCode(i18n.language),
+      const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
+      Speech.speak("Voice monitoring enabled. Say help help help for emergency.", {
+        language: languageCode,
         pitch: 1.0,
         rate: 0.8,
       });
@@ -439,7 +492,10 @@ const Index = () => {
       Speech.stop();
       setIsSpeaking(true);
 
-      const languageCode = getSpeechLanguageCode(i18n.language);
+      const languageCode = getSpeechLanguageCode(i18n.language) || 'en';
+      console.log(`🎤 Speaking in language: ${languageCode}`);
+      console.log(`🎤 Message: ${welcomeMessage}`);
+
       Speech.speak(welcomeMessage, {
         language: languageCode,
         pitch: 1.0,
@@ -465,7 +521,7 @@ const Index = () => {
     const initializeWelcome = async () => {
       setTimeout(() => {
         speakWelcomeMessage();
-      }, 1500) as unknown as NodeJS.Timeout;
+      }, 1500);
     };
 
     initializeWelcome();
@@ -474,27 +530,36 @@ const Index = () => {
 
     return () => {
       cleanup();
-      subscription?.remove();
+      if (subscription) {
+        subscription.remove();
+      }
     };
   }, []);
+
+  // Update listening when isListening changes
+  useEffect(() => {
+    if (isListening) {
+      startListeningContinuous();
+    }
+  }, [isListening]);
 
   const features = [
     {
       icon: icons.play,
-      title: t('speech.title'),
-      description: t('speech.generateSpeech'),
+      title: t('speech.title') || 'Text to Speech',
+      description: t('speech.generateSpeech') || 'Convert text to natural speech',
       onPress: () => router.push("/speech")
     },
     {
       icon: icons.person,
-      title: t('sos.title'),
-      description: t('sos.subtitle'),
+      title: t('sos.title') || 'Emergency SOS',
+      description: t('sos.subtitle') || 'Emergency assistance',
       onPress: () => router.push("/sos")
     },
     {
       icon: icons.save,
-      title: t('currency.title'),
-      description: t('currency.subtitle'),
+      title: t('currency.title') || 'Currency',
+      description: t('currency.subtitle') || 'Currency converter',
       onPress: () => router.push("/currency")
     }
   ];
@@ -640,7 +705,7 @@ const Index = () => {
             accessibilityRole="header"
             accessibilityLabel="Dhvani - Text to Speech Application"
           >
-            {t('home.title')}
+            {t('home.title') || 'Dhvani'}
           </Text>
 
           <Text style={{
@@ -651,7 +716,7 @@ const Index = () => {
             marginBottom: 16,
             letterSpacing: 1,
           }}>
-            {t('home.subtitle').toUpperCase()}
+            {(t('home.subtitle') || 'Text to Speech Assistant').toUpperCase()}
           </Text>
 
           <Text style={{
@@ -661,7 +726,7 @@ const Index = () => {
             color: '#6B7280',
             marginBottom: 24,
           }}>
-            {t('home.description')}
+            {welcomeMessage}
           </Text>
 
           <TouchableOpacity
@@ -698,7 +763,7 @@ const Index = () => {
               fontWeight: '600',
               color: isSpeaking ? '#9CA3AF' : '#3B82F6',
             }}>
-              {isSpeaking ? t('common.loading') : t('voice.replayWelcome')}
+              {isSpeaking ? (t('common.loading') || 'Loading...') : 'Replay Welcome'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -730,7 +795,7 @@ const Index = () => {
                 color: '#6B7280',
                 textAlign: 'center',
               }}>
-                {t('language.currentLanguage')}: {i18n.language.toUpperCase()}
+                {(t('language.currentLanguage') || 'Current Language')}: {(i18n.language || 'en').toUpperCase()}
               </Text>
             </View>
             
@@ -741,28 +806,32 @@ const Index = () => {
             }}>
               <TouchableOpacity
                 onPress={async () => {
-                  await changeLanguage('en');
-                  speakWelcomeMessage();
+                  try {
+                    await changeLanguage('en');
+                    setTimeout(speakWelcomeMessage, 500);
+                  } catch (error) {
+                    console.error('Error changing language:', error);
+                  }
                 }}
                 style={{
                   paddingHorizontal: 24,
                   paddingVertical: 16,
                   borderRadius: 16,
-                  backgroundColor: i18n.language === 'en' ? '#3B82F6' : '#F9FAFB',
+                  backgroundColor: (i18n.language || 'en') === 'en' ? '#3B82F6' : '#F9FAFB',
                   borderWidth: 2,
-                  borderColor: i18n.language === 'en' ? '#3B82F6' : '#E5E7EB',
+                  borderColor: (i18n.language || 'en') === 'en' ? '#3B82F6' : '#E5E7EB',
                   minWidth: 100,
                 }}
                 accessible={true}
                 accessibilityRole="button"
                 accessibilityLabel="Switch to English language"
-                accessibilityState={{ selected: i18n.language === 'en' }}
+                accessibilityState={{ selected: (i18n.language || 'en') === 'en' }}
               >
                 <Text style={{
                   fontSize: 16,
                   fontWeight: '700',
                   textAlign: 'center',
-                  color: i18n.language === 'en' ? '#FFFFFF' : '#374151',
+                  color: (i18n.language || 'en') === 'en' ? '#FFFFFF' : '#374151',
                 }}>
                   {t('language.english')}
                 </Text>
@@ -770,28 +839,32 @@ const Index = () => {
 
               <TouchableOpacity
                 onPress={async () => {
-                  await changeLanguage('hi');
-                  speakWelcomeMessage();
+                  try {
+                    await changeLanguage('hi');
+                    setTimeout(speakWelcomeMessage, 500);
+                  } catch (error) {
+                    console.error('Error changing language:', error);
+                  }
                 }}
                 style={{
                   paddingHorizontal: 24,
                   paddingVertical: 16,
                   borderRadius: 16,
-                  backgroundColor: i18n.language === 'hi' ? '#3B82F6' : '#F9FAFB',
+                  backgroundColor: (i18n.language || 'en') === 'hi' ? '#3B82F6' : '#F9FAFB',
                   borderWidth: 2,
-                  borderColor: i18n.language === 'hi' ? '#3B82F6' : '#E5E7EB',
+                  borderColor: (i18n.language || 'en') === 'hi' ? '#3B82F6' : '#E5E7EB',
                   minWidth: 100,
                 }}
                 accessible={true}
                 accessibilityRole="button"
                 accessibilityLabel="Switch to Hindi language"
-                accessibilityState={{ selected: i18n.language === 'hi' }}
+                accessibilityState={{ selected: (i18n.language || 'en') === 'hi' }}
               >
                 <Text style={{
                   fontSize: 16,
                   fontWeight: '700',
                   textAlign: 'center',
-                  color: i18n.language === 'hi' ? '#FFFFFF' : '#374151',
+                  color: (i18n.language || 'en') === 'hi' ? '#FFFFFF' : '#374151',
                 }}>
                   {t('language.hindi')}
                 </Text>
@@ -842,7 +915,7 @@ const Index = () => {
                 textAlign: 'center',
                 marginBottom: 8,
               }}>
-                {t('speech.title')}
+                {t('speech.title') || 'Text to Speech'}
               </Text>
               <Text style={{
                 fontSize: 16,
@@ -850,7 +923,7 @@ const Index = () => {
                 textAlign: 'center',
                 lineHeight: 24,
               }}>
-                {t('speech.generateSpeech')}
+                {t('speech.generateSpeech') || 'Convert text to natural speech'}
               </Text>
             </View>
              
@@ -866,7 +939,7 @@ const Index = () => {
                 color: '#FFFFFF',
                 textAlign: 'center',
               }}>
-                {t('home.welcome')}
+                {t('home.welcome') || 'Get Started'}
               </Text>
             </View>
           </TouchableOpacity>
