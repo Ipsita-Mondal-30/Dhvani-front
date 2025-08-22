@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as Speech from "expo-speech";
 import SimpleHamburgerMenu from "@/src/components/SimpleHamburgerMenu";
+import { useTranslation } from 'react-i18next';
 
 // ======================
 // CONFIG — replace with your OCR.Space API key
@@ -24,9 +25,9 @@ const OCR_SPACE_API_KEY = "K86479850788957"; // <-- put your real key here
 const OCR_ENDPOINT = "https://api.ocr.space/parse/image";
 
 // ======================
-// Voice Messages (Hindi guidance)
+// Voice Messages (Hindi & English guidance)
 // ======================
-const VOICE_MESSAGES = {
+const VOICE_MESSAGES_HI = {
   welcome: "नमस्ते। आपका ध्वनि ऐप में स्वागत है। यह स्क्रीन आपके टेक्स्ट को सुनाकर बताएगी।",
   chooseInput:
     "आप टेक्स्ट जोड़ने के लिए फोटो चुन सकते हैं, पीडीएफ चुन सकते हैं, या सीधे टाइप कर सकते हैं।",
@@ -38,6 +39,20 @@ const VOICE_MESSAGES = {
   noContent: "कोई टेक्स्ट नहीं मिला।",
   instructions:
     "उपयोग का तरीका: फोटो या पीडीएफ चुनें, या टेक्स्ट टाइप करें। फिर सुनाने के लिए प्ले दबाएं। भाषा बदलने के लिए हिंदी या English बटन दबाएं।",
+};
+
+const VOICE_MESSAGES_EN = {
+  welcome: "Hello. Welcome to Dhvani. This screen reads your text aloud.",
+  chooseInput:
+    "You can add text by selecting a photo, picking a PDF, or typing directly.",
+  selectImage: "Press here to select an image.",
+  selectPdf: "Press here to select a PDF file.",
+  typeText: "Type your text here.",
+  processing: "Please wait. Extracting text from your file.",
+  textFound: "Text found. I will read it now.",
+  noContent: "No text found.",
+  instructions:
+    "How to use: Select a photo or PDF, or type your text. Then press Play to hear it. Use the language buttons to change voice.",
 };
 
 // ======================
@@ -76,7 +91,7 @@ async function ocrWithOcrSpaceAsync(file: {
     type:
       file.type ??
       (file.uri.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
-  });
+  } as any);
 
   const res = await fetch(OCR_ENDPOINT, { method: "POST", body: form as any });
   if (!res.ok) throw new Error(`OCR request failed (${res.status})`);
@@ -88,7 +103,7 @@ async function ocrWithOcrSpaceAsync(file: {
 // ======================
 // Accessible Button
 // ======================
-type BtnVariant = "primary" | "secondary" | "danger" | "success";
+ type BtnVariant = "primary" | "secondary" | "danger" | "success";
 function AButton({
   label,
   onPress,
@@ -150,44 +165,56 @@ function AButton({
 // Main TTS Screen
 // ======================
 export default function SpeechScreen() {
+  const { t, i18n } = useTranslation();
   const [text, setText] = useState<string>("");
   const [busy, setBusy] = useState(false);
-  const [lang, setLang] = useState<"hi-IN" | "en-US">("hi-IN");
+  const [lang, setLang] = useState<"hi-IN" | "en-US">(i18n.language === 'hi' ? "hi-IN" : "en-US");
   const [status, setStatus] = useState<string>("");
+
+  const M = i18n.language === 'hi' ? VOICE_MESSAGES_HI : VOICE_MESSAGES_EN;
 
   // announce on mount
   useEffect(() => {
-    const t = setTimeout(() => {
-      speakHi(VOICE_MESSAGES.welcome);
-      setTimeout(() => speakHi(VOICE_MESSAGES.chooseInput), 2600);
+    const tmr = setTimeout(() => {
+      if (i18n.language === 'hi') {
+        speakHi(M.welcome);
+        setTimeout(() => speakHi(M.chooseInput), 2600);
+      } else {
+        speakEn(M.welcome);
+        setTimeout(() => speakEn(M.chooseInput), 2600);
+      }
     }, 600);
     return () => {
-      clearTimeout(t);
+      clearTimeout(tmr);
       stopSpeaking();
     };
-  }, []);
+  }, [i18n.language]);
 
   // speak helper based on chosen language
   const speak = (content: string) => {
     if (!content?.trim()) {
-      speakHi(VOICE_MESSAGES.noContent);
-      Alert.alert("No Text", "Please add some text first.");
-      return;
-    }
+      if (i18n.language === 'hi') {
+        speakHi(M.noContent);
+      } else {
+        speakEn(M.noContent);
+      }
+      Alert.alert(t('speechPage.noText'), t('speechPage.addTextFirst'));
+        return;
+      }
     Speech.stop();
     if (lang === "hi-IN") {
       Speech.speak(content, { language: "hi-IN", pitch: 1.0, rate: 0.95 });
-    } else {
+      } else {
       Speech.speak(content, { language: "en-US", pitch: 1.0, rate: 1.0 });
     }
   };
 
   const pickImage = async () => {
     stopSpeaking();
-    speakHi(VOICE_MESSAGES.processing);
+    if (i18n.language === 'hi') speakHi(M.processing); else speakEn(M.processing);
     try {
       setBusy(true);
-      setStatus("Opening image picker…");
+      setStatus(t('common.loading'));
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.9,
@@ -195,7 +222,7 @@ export default function SpeechScreen() {
       if (res.canceled || !res.assets?.length) {
         setBusy(false);
         setStatus("");
-        speakHi("फोटो नहीं चुनी गई।");
+        if (i18n.language === 'hi') speakHi("फोटो नहीं चुनी गई।"); else speakEn("No image selected.");
         return;
       }
       const asset = res.assets[0];
@@ -204,10 +231,10 @@ export default function SpeechScreen() {
         name: asset.fileName ?? "image.jpg",
         type: asset.mimeType ?? "image/jpeg",
       };
-      setStatus("Running OCR on image…");
+      setStatus(t('common.loading'));
       const extracted = await ocrWithOcrSpaceAsync(file);
       if (!extracted) {
-        speakHi(VOICE_MESSAGES.noContent);
+        if (i18n.language === 'hi') speakHi(M.noContent); else speakEn(M.noContent);
         setBusy(false);
         setStatus("");
         return;
@@ -215,12 +242,12 @@ export default function SpeechScreen() {
       setText(extracted);
       setBusy(false);
       setStatus("");
-      speakHi(VOICE_MESSAGES.textFound);
+      if (i18n.language === 'hi') speakHi(M.textFound); else speakEn(M.textFound);
       setTimeout(() => speak(extracted), 900);
     } catch (e: any) {
       setBusy(false);
       setStatus("");
-      speakHi("त्रुटि हुई।");
+      if (i18n.language === 'hi') speakHi("त्रुटि हुई।"); else speakEn("An error occurred.");
       Alert.alert(
         "Image OCR Error",
         e?.message ?? "Could not extract text from the selected image."
@@ -230,10 +257,10 @@ export default function SpeechScreen() {
 
   const pickPdf = async () => {
     stopSpeaking();
-    speakHi(VOICE_MESSAGES.processing);
+    if (i18n.language === 'hi') speakHi(M.processing); else speakEn(M.processing);
     try {
       setBusy(true);
-      setStatus("Opening document picker…");
+      setStatus(t('common.loading'));
       const res = await DocumentPicker.getDocumentAsync({
         type: "application/pdf",
         multiple: false,
@@ -242,15 +269,15 @@ export default function SpeechScreen() {
       if (res.canceled || !res.assets?.length) {
         setBusy(false);
         setStatus("");
-        speakHi("पीडीएफ नहीं चुनी गई।");
+        if (i18n.language === 'hi') speakHi("पीडीएफ नहीं चुनी गई।"); else speakEn("No PDF selected.");
         return;
       }
       const asset = res.assets[0];
       const file = { uri: asset.uri, name: asset.name ?? "document.pdf", type: "application/pdf" };
-      setStatus("Running OCR on PDF…");
+      setStatus(t('common.loading'));
       const extracted = await ocrWithOcrSpaceAsync(file);
       if (!extracted) {
-        speakHi(VOICE_MESSAGES.noContent);
+        if (i18n.language === 'hi') speakHi(M.noContent); else speakEn(M.noContent);
         setBusy(false);
         setStatus("");
         return;
@@ -258,12 +285,12 @@ export default function SpeechScreen() {
       setText(extracted);
       setBusy(false);
       setStatus("");
-      speakHi(VOICE_MESSAGES.textFound);
+      if (i18n.language === 'hi') speakHi(M.textFound); else speakEn(M.textFound);
       setTimeout(() => speak(extracted), 900);
     } catch (e: any) {
       setBusy(false);
       setStatus("");
-      speakHi("त्रुटि हुई।");
+      if (i18n.language === 'hi') speakHi("त्रुटि हुई।"); else speakEn("An error occurred.");
       Alert.alert(
         "PDF OCR Error",
         e?.message ?? "Could not extract text from the selected PDF."
@@ -271,34 +298,38 @@ export default function SpeechScreen() {
     }
   };
 
-  const handleTextFocus = () => speakHi(VOICE_MESSAGES.typeText);
+  const handleTextFocus = () => {
+    if (i18n.language === 'hi') speakHi(M.typeText); else speakEn(M.typeText);
+  };
 
   const clearAll = () => {
     stopSpeaking();
     setText("");
-    speakHi("टेक्स्ट साफ कर दिया गया।");
+    if (i18n.language === 'hi') speakHi(t('speechPage.cleared')); else speakEn(t('speechPage.cleared'));
   };
+
+  const languageName = lang === "hi-IN" ? t('language.hindi') : t('language.english');
 
   return (
     <View style={styles.container}>
       <SimpleHamburgerMenu/>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
+      
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Dhvani</Text>
-        <Text style={styles.subtitle}>Text to Speech</Text>
+        <Text style={styles.subtitle}>{t('speechPage.subtitle')}</Text>
         <TouchableOpacity
           style={styles.helpBtn}
           onPress={() => {
             stopSpeaking();
-            speakHi(VOICE_MESSAGES.instructions);
+            if (i18n.language === 'hi') speakHi(M.instructions); else speakEn(M.instructions);
           }}
           accessible
-          accessibilityLabel="उपयोग का तरीका सुनें"
-          accessibilityHint="इस बटन को दबाने से आपको उपयोग का तरीका सुनाई देगा"
+          accessibilityLabel={i18n.language === 'hi' ? "उपयोग का तरीका सुनें" : "Hear usage instructions"}
+          accessibilityHint={i18n.language === 'hi' ? "इस बटन को दबाने से आपको उपयोग का तरीका सुनाई देगा" : "Press to hear how to use this screen"}
         >
-          <Text style={styles.helpBtnText}>🔊 Help</Text>
+          <Text style={styles.helpBtnText}>🔊 {t('speechPage.help')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -311,41 +342,41 @@ export default function SpeechScreen() {
       >
         {/* Input actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Choose Input Method</Text>
+          <Text style={styles.sectionTitle}>{t('speechPage.chooseInput')}</Text>
           <Text style={styles.sectionDesc}>
-            Select an image or PDF to extract text, or type your text below
+            {t('speechPage.chooseInputDesc')}
           </Text>
 
           <View style={styles.buttonContainer}>
             <AButton
-              label="Select Image"
+              label={t('speechPage.selectImage')}
               icon="📷"
               onPress={pickImage}
-              hint="Opens gallery to select an image for OCR and speech"
-              onFocusVoice={VOICE_MESSAGES.selectImage}
+              hint={t('speechPage.selectImage')}
+              onFocusVoice={M.selectImage}
               disabled={busy}
             />
             <AButton
-              label="Select PDF"
+              label={t('speechPage.selectPdf')}
               icon="📄"
               variant="secondary"
               onPress={pickPdf}
-              hint="Opens file picker for PDF OCR"
-              onFocusVoice={VOICE_MESSAGES.selectPdf}
+              hint={t('speechPage.selectPdf')}
+              onFocusVoice={M.selectPdf}
               disabled={busy}
-            />
-          </View>
-        </View>
+                />
+              </View>
+            </View>
 
         {/* Manual input */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Type Your Text</Text>
-          <Text style={styles.sectionDesc}>Enter the text you want to be spoken aloud</Text>
+          <Text style={styles.sectionTitle}>{t('speechPage.typeYourText')}</Text>
+          <Text style={styles.sectionDesc}>{t('speechPage.typeYourTextDesc')}</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
               multiline
-              placeholder="Type or paste your text here..."
+              placeholder={t('speechPage.placeholder')}
               placeholderTextColor="#94a3b8"
               value={text}
               onChangeText={setText}
@@ -353,10 +384,10 @@ export default function SpeechScreen() {
               textAlignVertical="top"
               accessible
               accessibilityLabel="Text input"
-              accessibilityHint="Type or paste text here, then press Play to hear it"
+              accessibilityHint={t('speechPage.typeYourTextDesc')}
             />
-          </View>
-        </View>
+              </View>
+            </View>
 
         {/* Busy indicator */}
         {busy && (
@@ -368,39 +399,39 @@ export default function SpeechScreen() {
 
         {/* Playback controls */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Playback Controls</Text>
+          <Text style={styles.sectionTitle}>{t('speechPage.playbackControls')}</Text>
           
           {/* Main play button */}
           <View style={styles.buttonContainer}>
             <AButton
-              label={`▶️ Play in ${lang === "hi-IN" ? "Hindi" : "English"}`}
+              label={`▶️ ${t('speechPage.playIn', { language: languageName })}`}
               variant="success"
               onPress={() => speak(text)}
-              hint="Speaks the text aloud"
-              onFocusVoice="प्ले दबाने से टेक्स्ट सुनाई देगा।"
+              hint={t('speechPage.pressPlayHint')}
+              onFocusVoice={i18n.language === 'hi' ? "प्ले दबाने से टेक्स्ट सुनाई देगा।" : "Press play to hear the text."}
               disabled={busy}
             />
             <AButton
-              label="⏹️ Stop"
+              label={`⏹️ ${t('speechPage.stop')}`}
               variant="danger"
               onPress={stopSpeaking}
-              hint="Stops speech"
-              onFocusVoice="स्पीच रोक दी जाएगी।"
-            />
-          </View>
-
+              hint={t('speechPage.speechWillStop')}
+              onFocusVoice={i18n.language === 'hi' ? "स्पीच रोक दी जाएगी।" : t('speechPage.speechWillStop')}
+              />
+            </View>
+            
           {/* Language selection */}
           <View style={styles.languageSection}>
-            <Text style={styles.languageTitle}>Language Selection</Text>
+            <Text style={styles.languageTitle}>{t('speechPage.languageSelection')}</Text>
             <View style={styles.languageButtons}>
               <AButton
-                label="🇮🇳 Hindi"
+                label="🇮🇳 हिंदी"
                 onPress={() => {
                   setLang("hi-IN");
                   speakHi("भाषा हिंदी चुनी गई।");
                 }}
                 variant={lang === "hi-IN" ? "primary" : "secondary"}
-                hint="Set speech language to Hindi"
+                hint={t('speechPage.languageSelection')}
               />
               <AButton
                 label="🇺🇸 English"
@@ -409,27 +440,27 @@ export default function SpeechScreen() {
                   speakEn("English language selected.");
                 }}
                 variant={lang === "en-US" ? "primary" : "secondary"}
-                hint="Set speech language to English"
+                hint={t('speechPage.languageSelection')}
               />
             </View>
-          </View>
+            </View>
 
           {/* Clear button */}
           <View style={styles.buttonContainer}>
             <AButton
-              label="🗑️ Clear Text"
+              label={`🗑️ ${t('speechPage.clearText')}`}
               variant="secondary"
               onPress={clearAll}
-              hint="Clears current text"
-              onFocusVoice="टेक्स्ट साफ करने के लिए दबाएं।"
+              hint={t('speechPage.clearText')}
+              onFocusVoice={i18n.language === 'hi' ? "टेक्स्ट साफ करने के लिए दबाएं।" : t('speechPage.clearText')}
             />
           </View>
-        </View>
-
+            </View>
+            
         {/* Preview of text */}
         {!!text && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current Text Preview</Text>
+            <Text style={styles.sectionTitle}>{t('speechPage.currentTextPreview')}</Text>
             <View style={styles.previewContainer}>
               <ScrollView
                 style={styles.previewScroll}
@@ -438,11 +469,11 @@ export default function SpeechScreen() {
               >
                 <Text style={styles.previewText}>{text}</Text>
               </ScrollView>
-            </View>
-          </View>
-        )}
+              </View>
+                </View>
+              )}
       </ScrollView>
-    </View>
+            </View>
   );
 }
 
@@ -451,7 +482,7 @@ export default function SpeechScreen() {
 // ======================
 const styles = StyleSheet.create({
   container: { 
-    flex: 1, 
+                      flex: 1,
     backgroundColor: "#ffffff" 
   },
 
@@ -484,7 +515,7 @@ const styles = StyleSheet.create({
   helpBtn: {
     marginTop: 16,
     backgroundColor: "#3b82f6",
-    paddingVertical: 12,
+                      paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 24,
     shadowColor: "#3b82f6",
@@ -501,7 +532,7 @@ const styles = StyleSheet.create({
 
   // Scroll view styles
   scrollView: { 
-    flex: 1,
+                      flex: 1,
     backgroundColor: "#ffffff",
   },
   scrollContent: { 
@@ -563,7 +594,7 @@ const styles = StyleSheet.create({
     elevation: 0 
   },
   btnText: { 
-    fontSize: 18, 
+                  fontSize: 18,
     fontWeight: "600" 
   },
   btnTextPrimary: { 
@@ -593,7 +624,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     borderWidth: 2,
     borderColor: "#e2e8f0",
-    borderRadius: 16,
+                    borderRadius: 16,
     backgroundColor: "#ffffff",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -603,7 +634,7 @@ const styles = StyleSheet.create({
   },
   input: {
     minHeight: 140,
-    padding: 20,
+            padding: 20,
     fontSize: 18,
     color: "#1e293b",
     lineHeight: 26,
@@ -613,7 +644,7 @@ const styles = StyleSheet.create({
   loadingContainer: {
     backgroundColor: "#f8fafc",
     borderColor: "#e2e8f0",
-    borderWidth: 1,
+                borderWidth: 1,
     borderRadius: 16,
     padding: 32,
     alignItems: "center",
@@ -629,7 +660,7 @@ const styles = StyleSheet.create({
   // Preview styles
   previewContainer: {
     backgroundColor: "#f8fafc",
-    borderWidth: 1,
+                borderWidth: 1,
     borderColor: "#e2e8f0",
     borderRadius: 16,
     shadowColor: "#000",

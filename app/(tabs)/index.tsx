@@ -11,6 +11,8 @@ import {
   Dimensions,
   ActivityIndicator,
   AppState,
+  AppStateStatus,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
@@ -88,11 +90,10 @@ const Index = () => {
   const sosTimer = useRef<NodeJS.Timeout | null>(null);
   const listeningTimer = useRef<NodeJS.Timeout | null>(null);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
-  const appState = useRef(AppState.currentState);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
 
   const welcomeMessage = t('home.description');
 
-  // Cleanup function for all timers and resources
   const cleanup = () => {
     if (sosTimer.current) {
       clearTimeout(sosTimer.current);
@@ -115,10 +116,8 @@ const Index = () => {
     setIsSosMode(false);
   };
 
-  // Handle app state changes for background voice monitoring
-  const handleAppStateChange = (nextAppState: string) => {
+  const handleAppStateChange = (nextAppState: AppStateStatus) => {
     if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      // App came to foreground, restart voice monitoring if it was active
       if (isListening) {
         startVoiceMonitoring();
       }
@@ -126,17 +125,13 @@ const Index = () => {
     appState.current = nextAppState;
   };
 
-  // Start continuous voice monitoring
   const startVoiceMonitoring = async () => {
     try {
-      // Request microphone permissions
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
-        console.log('🎤 Microphone permission denied');
         return;
       }
 
-      // Configure audio for recording
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -148,7 +143,29 @@ const Index = () => {
     }
   };
 
-  // Continuous listening function
+  const recordingOptions: Audio.RecordingOptions = {
+    android: {
+      extension: '.m4a',
+      outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+      audioEncoder: Audio.AndroidAudioEncoder.AAC,
+      sampleRate: 16000,
+      numberOfChannels: 1,
+      bitRate: 128000,
+    },
+    ios: {
+      extension: '.m4a',
+      outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+      audioQuality: Audio.IOSAudioQuality.HIGH,
+      sampleRate: 16000,
+      numberOfChannels: 1,
+      bitRate: 128000,
+      linearPCMBitDepth: 16,
+      linearPCMIsBigEndian: false,
+      linearPCMIsFloat: false,
+    },
+    web: {},
+  };
+
   const startListeningContinuous = async () => {
     try {
       if (recording) {
@@ -156,49 +173,31 @@ const Index = () => {
         setRecording(null);
       }
 
-      const { recording: newRecording } = await Audio.Recording.createAsync({
-        android: {
-          extension: '.wav',
-          outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_DEFAULT,
-          audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_DEFAULT,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-        },
-        ios: {
-          extension: '.wav',
-          audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-        },
-      });
+      const { recording: newRecording } = await Audio.Recording.createAsync(recordingOptions);
 
       setRecording(newRecording);
       setIsListening(true);
 
-      // Listen for 3 seconds, then process
       listeningTimer.current = setTimeout(() => {
-        processAudio(newRecording);
-      }, 3000);
+        if (newRecording) {
+          processAudio(newRecording);
+        }
+      }, 3000) as unknown as NodeJS.Timeout;
 
     } catch (error) {
       console.error('❌ Failed to start recording:', error);
-      // Retry after a delay
-      setTimeout(startListeningContinuous, 2000);
+      setTimeout(startListeningContinuous, 2000) as unknown as NodeJS.Timeout;
     }
   };
 
-  // Process recorded audio
   const processAudio = async (audioRecording: Audio.Recording) => {
     try {
       await audioRecording.stopAndUnloadAsync();
       const uri = audioRecording.getURI();
       
       if (uri) {
-        // Simulated transcription (replace with actual STT in production)
         const transcription = await simulateTranscription(uri);
         setSoundTranscription(transcription);
-        
-        // Check if any SOS patterns match
         if (checkForSOSPattern(transcription)) {
           triggerVoiceActivatedSOS();
         }
@@ -206,32 +205,26 @@ const Index = () => {
 
       setRecording(null);
 
-      // Continue monitoring if listening is still enabled
       if (isListening) {
-        setTimeout(startListeningContinuous, 1000);
+        setTimeout(startListeningContinuous, 1000) as unknown as NodeJS.Timeout;
       }
     } catch (error) {
       console.error('❌ Failed to process audio:', error);
       setRecording(null);
-      
-      // Retry listening if still enabled
       if (isListening) {
-        setTimeout(startListeningContinuous, 2000);
+        setTimeout(startListeningContinuous, 2000) as unknown as NodeJS.Timeout;
       }
     }
   };
 
-  // Simulate transcription (replace with actual STT service)
   const simulateTranscription = async (uri: string): Promise<string> => {
-    // For demonstration, randomly return an SOS phrase occasionally
     const random = Math.random();
-    if (random < 0.02) { // 2% chance for testing
-      return SOS_VOICE_PATTERNS[0]; // 'help help help'
+    if (random < 0.02) {
+      return SOS_VOICE_PATTERNS[0];
     }
     return '';
   };
 
-  // Check for SOS patterns in transcription
   const checkForSOSPattern = (transcription: string): boolean => {
     const lowerTranscription = transcription.toLowerCase();
     return SOS_VOICE_PATTERNS.some(pattern => 
@@ -239,13 +232,10 @@ const Index = () => {
     );
   };
 
-  // Voice-activated SOS trigger
   const triggerVoiceActivatedSOS = () => {
-    console.log('🎤🚨 Voice-activated SOS detected!');
-    
-    // Provide audio feedback
-    Speech.speak('Emergency detected. SOS will activate in 5 seconds. Tap screen to cancel.', {
-      language: getSpeechLanguageCode(i18n.language),
+    const lang = getSpeechLanguageCode(i18n.language);
+    Speech.speak(t('emergency.detected'), {
+      language: lang,
       pitch: 1.1,
       rate: 0.9,
     });
@@ -253,11 +243,9 @@ const Index = () => {
     setIsSosMode(true);
     setSOSCountdown(5);
 
-    // Start countdown
     countdownInterval.current = setInterval(() => {
       setSOSCountdown(prev => {
         if (prev <= 1) {
-          // Countdown finished - activate SOS
           if (countdownInterval.current) {
             clearInterval(countdownInterval.current);
             countdownInterval.current = null;
@@ -267,44 +255,38 @@ const Index = () => {
         }
         return prev - 1;
       });
-    }, 1000);
+    }, 1000) as unknown as NodeJS.Timeout;
 
-    // Auto-activate after 5 seconds if not cancelled
     sosTimer.current = setTimeout(() => {
       executeSOS();
-    }, 5000);
+    }, 5000) as unknown as NodeJS.Timeout;
   };
 
-  // Manual SOS trigger (tap on empty area)
   const triggerEmergencySOS = async () => {
-    console.log('👆🚨 Manual Emergency SOS triggered');
-    
-    // Stop any ongoing speech
     Speech.stop();
     setIsSpeaking(false);
-    
-    // Show countdown alert
+
     Alert.alert(
-      "EMERGENCY SOS",
-      "Emergency services will be contacted in 5 seconds. Tap Cancel to stop.",
+      t('emergency.title'),
+      t('emergency.callingIn', { seconds: 5 }),
       [
         {
-          text: "Cancel",
-          style: "cancel",
+          text: t('common.cancel'),
+          style: 'cancel',
           onPress: () => cancelSOS()
         },
         {
-          text: "Send Now",
-          style: "destructive",
+          text: t('emergency.cancel'),
+          style: 'destructive',
           onPress: () => executeSOS()
         }
       ]
     );
 
-    // Start countdown
     setSOSCountdown(5);
     setIsSosMode(true);
     
+    const lang = getSpeechLanguageCode(i18n.language);
     countdownInterval.current = setInterval(() => {
       setSOSCountdown(prev => {
         if (prev <= 1) {
@@ -315,20 +297,16 @@ const Index = () => {
           executeSOS();
           return 0;
         }
-        
-        // Voice countdown
         Speech.speak(`${prev - 1}`, {
-          language: 'en',
+          language: lang,
           pitch: 1.2,
           rate: 1.0,
         });
-        
         return prev - 1;
       });
-    }, 1000);
+    }, 1000) as unknown as NodeJS.Timeout;
   };
 
-  // Cancel SOS activation
   const cancelSOS = () => {
     if (sosTimer.current) {
       clearTimeout(sosTimer.current);
@@ -342,14 +320,13 @@ const Index = () => {
     setIsSosMode(false);
     setSOSCountdown(0);
     
-    Speech.speak('SOS cancelled', {
+    Speech.speak(t('emergency.cancelled'), {
       language: getSpeechLanguageCode(i18n.language),
       pitch: 1.0,
       rate: 0.9,
     });
   };
 
-  // Execute SOS
   const executeSOS = async () => {
     setIsSendingSOS(true);
     setIsSosMode(false);
@@ -365,7 +342,7 @@ const Index = () => {
     }
     
     try {
-      Speech.speak("Sending emergency SOS now. Please wait.", {
+      Speech.speak(t('emergency.sendingNow'), {
         language: getSpeechLanguageCode(i18n.language),
         pitch: 1.1,
         rate: 0.9,
@@ -375,52 +352,48 @@ const Index = () => {
       
       if (result.success) {
         Alert.alert(
-          "Emergency SOS Sent",
+          t('emergency.title'), 
           result.message,
-          [{ text: "OK" }]
+          [{ text: t('common.ok') }]
         );
         
-        Speech.speak("Emergency SOS sent successfully. Help is on the way.", {
+        Speech.speak(t('emergency.sentSuccess'), {
           language: getSpeechLanguageCode(i18n.language),
           pitch: 1.0,
           rate: 0.8,
         });
       } else {
         Alert.alert(
-          "SOS Failed",
-          result.message + "\n\nTrying to call emergency services directly.",
-          [{ text: "OK" }]
+          t('common.error'),
+          result.message,
+          [{ text: t('common.ok') }]
         );
-        
         await SOSService.callEmergencyServices();
       }
     } catch (error) {
       console.error('💥 Emergency SOS failed:', error);
       Alert.alert(
-        "Emergency Error",
-        "Failed to send SOS. Please call emergency services directly.",
-        [{ text: "OK" }]
+        t('common.error'),
+        t('emergency.error'),
+        [{ text: t('common.ok') }]
       );
     } finally {
       setIsSendingSOS(false);
     }
   };
 
-  // Toggle voice monitoring
   const toggleVoiceMonitoring = () => {
     if (isListening) {
-      // Stop listening
       setIsListening(false);
       cleanup();
-      Speech.speak("Voice monitoring disabled", {
+      Speech.speak(t('voice.monitoringDisabled'), {
         language: getSpeechLanguageCode(i18n.language),
         pitch: 1.0,
         rate: 0.8,
       });
     } else {
-      // Start listening
       startVoiceMonitoring();
-      Speech.speak("Voice monitoring enabled. Say help help help for emergency.", {
+      Speech.speak(t('voice.monitoringEnabled'), {
         language: getSpeechLanguageCode(i18n.language),
         pitch: 1.0,
         rate: 0.8,
@@ -428,44 +401,31 @@ const Index = () => {
     }
   };
 
-  // Pan responder for detecting taps on empty areas
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onStartShouldSetPanResponderCapture: (evt, gestureState) => {
-      // Only capture taps in empty areas (not on existing buttons)
       const { pageX, pageY } = evt.nativeEvent;
-      
-      // Define areas to avoid (approximate positions)
       const hamburgerArea = { x: 20, y: 50, width: 56, height: 56 };
       const headerHeight = 200;
       const featureCardsStartY = headerHeight + 200;
-      
-      // Check if tap is in hamburger menu area
       if (pageX >= hamburgerArea.x && 
           pageX <= hamburgerArea.x + hamburgerArea.width &&
           pageY >= hamburgerArea.y && 
           pageY <= hamburgerArea.y + hamburgerArea.height) {
         return false;
       }
-      
-      // If tap is on feature cards area, ignore
       if (pageY >= featureCardsStartY) {
         return false;
       }
-      
-      // If tap is on language switcher or other interactive elements
       if (pageY >= headerHeight && pageY <= featureCardsStartY) {
-        // Check if it's in the language switcher area (rough approximation)
         const languageSwitcherY = headerHeight + 50;
         if (pageY >= languageSwitcherY && pageY <= languageSwitcherY + 100) {
           return false;
         }
       }
-      
       return true;
     },
     onPanResponderGrant: (evt, gestureState) => {
-      // Handle SOS activation or cancellation
       if (isSosMode) {
         cancelSOS();
       } else {
@@ -480,41 +440,23 @@ const Index = () => {
       setIsSpeaking(true);
 
       const languageCode = getSpeechLanguageCode(i18n.language);
-      console.log(`🎤 Speaking in language: ${languageCode}`);
-      console.log(`🎤 Message: ${welcomeMessage}`);
-
       Speech.speak(welcomeMessage, {
         language: languageCode,
         pitch: 1.0,
         rate: 0.8,
-        onDone: () => {
-          console.log('✅ Speech completed');
+        onDone: () => setIsSpeaking(false),
+        onStopped: () => setIsSpeaking(false),
+        onError: () => {
           setIsSpeaking(false);
-        },
-        onStopped: () => {
-          console.log('⏹️ Speech stopped');
-          setIsSpeaking(false);
-        },
-        onError: (error) => {
-          console.error('❌ Speech error:', error);
-          console.log('🔄 Trying fallback to English');
-          setIsSpeaking(false);
-
-          // Fallback to English
           Speech.speak(welcomeMessage, {
             pitch: 1.0,
             rate: 0.8,
             onDone: () => setIsSpeaking(false),
             onStopped: () => setIsSpeaking(false),
-            onError: (fallbackError) => {
-              console.error('❌ Fallback speech also failed:', fallbackError);
-              setIsSpeaking(false);
-            },
           });
         },
       });
     } catch (error) {
-      console.error('💥 Failed to speak welcome message:', error);
       setIsSpeaking(false);
     }
   };
@@ -523,15 +465,13 @@ const Index = () => {
     const initializeWelcome = async () => {
       setTimeout(() => {
         speakWelcomeMessage();
-      }, 1500);
+      }, 1500) as unknown as NodeJS.Timeout;
     };
 
     initializeWelcome();
 
-    // Handle app state changes
     const subscription = AppState.addEventListener('change', handleAppStateChange);
 
-    // Cleanup on unmount
     return () => {
       cleanup();
       subscription?.remove();
@@ -563,7 +503,6 @@ const Index = () => {
     <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} {...panResponder.panHandlers}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* SOS Countdown Overlay */}
       {(isSendingSOS || sosCountdown > 0 || isSosMode) && (
         <View className="absolute inset-0 bg-red-500/90 z-50 flex-1 justify-center items-center">
           <View className="bg-white rounded-xl p-8 mx-6">
@@ -576,7 +515,7 @@ const Index = () => {
                 marginTop: 16,
                 marginBottom: 8,
               }}>
-                EMERGENCY SOS
+                {t('emergency.title')}
               </Text>
               
               {sosCountdown > 0 ? (
@@ -595,16 +534,16 @@ const Index = () => {
                     textAlign: 'center',
                     marginBottom: 16,
                   }}>
-                    Calling emergency services in {sosCountdown} seconds
+                    {t('emergency.callingIn', { seconds: sosCountdown })}
                   </Text>
                   <Text className="text-sm text-gray-500 text-center mb-4">
-                    Tap anywhere to cancel
+                    {t('emergency.tapToCancel')}
                   </Text>
                   <TouchableOpacity
                     onPress={cancelSOS}
                     className="bg-red-500 px-6 py-3 rounded-lg"
                   >
-                    <Text className="color-white font-bold text-lg">Cancel SOS</Text>
+                    <Text className="color-white font-bold text-lg">{t('emergency.cancel')}</Text>
                   </TouchableOpacity>
                 </>
               ) : isSendingSOS ? (
@@ -615,7 +554,7 @@ const Index = () => {
                     color: '#374151',
                     textAlign: 'center',
                   }}>
-                    Sending emergency SOS...
+                    {t('emergency.sending')}
                   </Text>
                 </>
               ) : null}
@@ -624,12 +563,9 @@ const Index = () => {
         </View>
       )}
 
-      {/* Simple Hamburger Menu */}
       <SimpleHamburgerMenu />
 
-      {/* Voice Status and Emergency Help Instructions */}
       <View className="absolute top-20 right-4 bg-white border border-gray-300 rounded-lg p-3 z-40">
-        {/* Voice Status */}
         <View className="flex-row items-center mb-2">
           <Ionicons 
             name={isListening ? "mic" : "mic-off"} 
@@ -637,7 +573,7 @@ const Index = () => {
             color={isListening ? "#10B981" : "#9CA3AF"} 
           />
           <Text className="text-xs font-semibold text-gray-700 ml-1">
-            {isListening ? 'Listening' : 'Voice Off'}
+            {isListening ? t('voice.statusListening') : t('voice.statusOff')}
           </Text>
         </View>
         
@@ -647,18 +583,16 @@ const Index = () => {
           </Text>
         ) : null}
         
-        {/* Emergency Instructions */}
         <Text className="text-xs font-semibold text-red-700 mb-1">Emergency Help</Text>
         <Text className="text-xs text-red-600">• Tap empty area for SOS</Text>
         <Text className="text-xs text-red-600">• Say "help help help"</Text>
         
-        {/* Voice Toggle Button */}
         <TouchableOpacity
           onPress={toggleVoiceMonitoring}
           className={`mt-2 px-2 py-1 rounded ${isListening ? 'bg-green-500' : 'bg-gray-500'}`}
         >
           <Text className="text-xs font-semibold text-white">
-            {isListening ? 'Voice ON' : 'Enable Voice'}
+            {isListening ? t('voice.toggleOn') : t('voice.toggleEnable')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -668,14 +602,12 @@ const Index = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 80 }}
       >
-        {/* Header with Logo */}
         <View style={{
           alignItems: 'center',
           paddingHorizontal: 32,
           paddingTop: 80,
           paddingBottom: 40,
         }}>
-          {/* Large Logo */}
           <View style={{
             justifyContent: 'center',
             alignItems: 'center',
@@ -696,7 +628,6 @@ const Index = () => {
             />
           </View>
 
-          {/* App Title */}
           <Text
             style={{
               fontSize: 32,
@@ -712,7 +643,6 @@ const Index = () => {
             {t('home.title')}
           </Text>
 
-          {/* Subtitle */}
           <Text style={{
             fontSize: 16,
             fontWeight: '600',
@@ -724,7 +654,6 @@ const Index = () => {
             {t('home.subtitle').toUpperCase()}
           </Text>
 
-          {/* Description */}
           <Text style={{
             fontSize: 16,
             lineHeight: 24,
@@ -735,7 +664,6 @@ const Index = () => {
             {t('home.description')}
           </Text>
 
-          {/* Voice Replay Button */}
           <TouchableOpacity
             onPress={speakWelcomeMessage}
             disabled={isSpeaking}
@@ -770,12 +698,11 @@ const Index = () => {
               fontWeight: '600',
               color: isSpeaking ? '#9CA3AF' : '#3B82F6',
             }}>
-              {isSpeaking ? t('common.loading') : 'Replay Welcome'}
+              {isSpeaking ? t('common.loading') : t('voice.replayWelcome')}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Language Switcher */}
         <View style={{ paddingHorizontal: 32, marginBottom: 40 }}>
           <View style={{
             padding: 24,
@@ -837,7 +764,7 @@ const Index = () => {
                   textAlign: 'center',
                   color: i18n.language === 'en' ? '#FFFFFF' : '#374151',
                 }}>
-                  English
+                  {t('language.english')}
                 </Text>
               </TouchableOpacity>
 
@@ -866,14 +793,13 @@ const Index = () => {
                   textAlign: 'center',
                   color: i18n.language === 'hi' ? '#FFFFFF' : '#374151',
                 }}>
-                  हिंदी
+                  {t('language.hindi')}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {/* Text to Speech Component */}
         <View style={{ paddingHorizontal: 32, marginBottom: 40 }}>
           <TouchableOpacity
             onPress={() => router.push("/speech")}
@@ -928,7 +854,6 @@ const Index = () => {
               </Text>
             </View>
              
-            {/* Start Button */}
             <View style={{
               backgroundColor: '#3B82F6',
               borderRadius: 16,
@@ -947,7 +872,6 @@ const Index = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Emergency Features Information */}
         <View style={{ paddingHorizontal: 32, marginBottom: 40 }}>
           <View style={{
             padding: 24,

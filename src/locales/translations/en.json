@@ -10,11 +10,13 @@
     "edit": "Edit",
     "back": "Back",
     "next": "Next",
-    "done": "Done"
+    "done": "Done",
+    "info": "Information"
   },
   "navigation": {
     "home": "Home",
     "speech": "Speech",
+    "braille": "Braille",
     "settings": "Settings",
     "history": "History",
     "sos": "SOS",
@@ -36,6 +38,28 @@
     "textExtracted": "Text extracted successfully",
     "characters": "characters",
     "willBeTruncated": "Will be truncated"
+  },
+  "speechPage": {
+    "subtitle": "Text to Speech",
+    "chooseInput": "Choose Input Method",
+    "chooseInputDesc": "Select an image or PDF to extract text, or type your text below",
+    "selectImage": "Select Image",
+    "selectPdf": "Select PDF",
+    "typeYourText": "Type Your Text",
+    "typeYourTextDesc": "Enter the text you want to be spoken aloud",
+    "placeholder": "Type or paste your text here...",
+    "playbackControls": "Playback Controls",
+    "playIn": "Play in {{language}}",
+    "stop": "Stop",
+    "languageSelection": "Language Selection",
+    "clearText": "Clear Text",
+    "currentTextPreview": "Current Text Preview",
+    "help": "Help",
+    "pressPlayHint": "Press play to hear the text.",
+    "speechWillStop": "Speech will be stopped.",
+    "cleared": "Text cleared.",
+    "noText": "No Text",
+    "addTextFirst": "Please add some text first."
   },
   "settings": {
     "title": "Settings",
@@ -91,7 +115,23 @@
     "subtitle": "Quick access to emergency services",
     "sendSos": "Send SOS",
     "sosHistory": "SOS History",
-    "emergencyContacts": "Emergency Contacts"
+    "emergencyContacts": "Emergency Contacts",
+    "headingTitle": "Emergency SOS",
+    "headingSubtitle": "Send your location to emergency contacts",
+    "confirmTitle": "🚨 Emergency SOS",
+    "confirmText": "This will send your current location to emergency contacts via SMS. Are you sure you want to proceed?",
+    "confirmCancel": "Cancel",
+    "confirmSend": "Send SOS",
+    "sending": "Sending...",
+    "recentEvents": "Recent SOS Events",
+    "loadingHistory": "Loading history...",
+    "noEvents": "No SOS events recorded yet",
+    "importantNotice": "Important Notice",
+    "noticeText": "This SOS feature is designed to assist in emergencies but should not replace calling emergency services (911, 112, etc.) in life-threatening situations.",
+    "helpText": "Tap the button above to send your current location to emergency contacts via SMS. If no contacts are configured, emergency services will be called automatically.",
+    "callManually": "Call 911 Manually",
+    "lastMessageTitle": "Last Emergency Message",
+    "viewFullMessage": "View Full Message"
   },
   "currency": {
     "title": "Currency Reader",
@@ -110,18 +150,47 @@
     "selectLanguage": "Select Language",
     "languageChanged": "Language changed to {{language}}"
   },
-  "common": {
-    "loading": "Loading...",
-    "error": "Error",
-    "success": "Success",
-    "cancel": "Cancel",
-    "ok": "OK",
-    "save": "Save",
-    "delete": "Delete",
-    "edit": "Edit",
-    "back": "Back",
-    "next": "Next",
-    "done": "Done",
-    "info": "Information"
+  "menu": {
+    "title": "Navigation",
+    "close": "Close"
+  },
+  "voice": {
+    "statusListening": "Listening",
+    "statusOff": "Voice Off",
+    "toggleOn": "Voice ON",
+    "toggleEnable": "Enable Voice",
+    "replayWelcome": "Replay Welcome",
+    "monitoringEnabled": "Voice monitoring enabled. Say help help help for emergency.",
+    "monitoringDisabled": "Voice monitoring disabled"
+  },
+  "emergency": {
+    "title": "EMERGENCY SOS",
+    "callingIn": "Calling emergency services in {{seconds}} seconds",
+    "tapToCancel": "Tap anywhere to cancel",
+    "cancel": "Cancel SOS",
+    "sending": "Sending emergency SOS...",
+    "detected": "Emergency detected. SOS will activate in 5 seconds. Tap screen to cancel.",
+    "cancelled": "SOS cancelled",
+    "sendingNow": "Sending emergency SOS now. Please wait.",
+    "sentSuccess": "Emergency SOS sent successfully. Help is on the way.",
+    "error": "Failed to send SOS. Please call emergency services directly."
+  },
+  "braille": {
+    "title": "Text to Braille Converter",
+    "description": "Making text accessible through Braille conversion",
+    "chooseInput": "Choose Input Method",
+    "chooseInputDesc": "Select how you want to add text for Braille conversion",
+    "selectImage": "Select Image",
+    "selectPdf": "Select PDF",
+    "typeYourText": "Type Your Text",
+    "typeYourTextDesc": "Enter the text you want to be converted to Braille",
+    "extractedText": "Extracted Text",
+    "extractedTextDesc": "This is the text that was found in your image or PDF",
+    "brailleOutput": "Braille Output",
+    "brailleOutputDesc": "Grade-1 English Braille conversion of your text",
+    "saveFile": "Save Braille File",
+    "clearAll": "Clear All",
+    "howToUse": "How to Use Dhvani",
+    "listenInstructions": "Listen to Instructions"
   }
 }

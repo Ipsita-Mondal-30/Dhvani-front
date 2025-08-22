@@ -29,8 +29,6 @@ const SOSScreen = () => {
 
   useEffect(() => {
     loadSOSHistory();
-    
-    // Voice announcement when screen loads
     setTimeout(() => {
       Speech.speak(t('sos.subtitle'), {
         language: getSpeechLanguageCode(i18n.language),
@@ -46,29 +44,24 @@ const SOSScreen = () => {
       const result = await SOSService.getSOSHistory();
       if (result.success && result.logs) {
         setSOSHistory(result.logs);
-      } else {
-        console.warn('Failed to load SOS history:', result.error);
       }
-    } catch (error) {
-      console.error('Error loading SOS history:', error);
     } finally {
       setIsLoadingHistory(false);
     }
   };
 
   const handleSOSPress = async () => {
-    // Confirmation dialog
     Alert.alert(
-      "🚨 Emergency SOS",
-      "This will send your current location to emergency contacts via SMS. Are you sure you want to proceed?",
+      t('sos.confirmTitle'),
+      t('sos.confirmText'),
       [
         {
-          text: "Cancel",
-          style: "cancel"
+          text: t('sos.confirmCancel'),
+          style: 'cancel'
         },
         {
-          text: "Send SOS",
-          style: "destructive",
+          text: t('sos.confirmSend'),
+          style: 'destructive',
           onPress: sendSOS
         }
       ]
@@ -77,10 +70,8 @@ const SOSScreen = () => {
 
   const sendSOS = async () => {
     setIsSending(true);
-    
     try {
-      // Voice feedback
-      Speech.speak("Sending emergency SOS. Please wait.", {
+      Speech.speak(t('emergency.sendingNow'), {
         language: getSpeechLanguageCode(i18n.language),
         pitch: 1.1,
         rate: 0.9,
@@ -89,160 +80,102 @@ const SOSScreen = () => {
       const result = await SOSService.sendSOS();
       
       if (result.success) {
-        // Store the emergency message for display
-        const emergencyMsg = result.emergencyMessage || 'Emergency SOS sent with location.';
+        const emergencyMsg = result.emergencyMessage || t('emergency.sentSuccess');
         setLastEmergencyMessage(emergencyMsg);
         
         Alert.alert(
-          "✅ SOS Sent Successfully",
+          t('common.success'),
           result.message,
           [
-            { text: "OK" },
-            { text: "View Message", onPress: () => showEmergencyMessage(emergencyMsg) }
+            { text: t('common.ok') },
+            { text: t('sos.viewFullMessage'), onPress: () => showEmergencyMessage(emergencyMsg) }
           ]
         );
         
-        // Voice confirmation with specific details
-        let voiceMessage = "SOS sent successfully.";
-        if (result.message && (result.message.includes('911') || result.message.includes('112'))) {
-          voiceMessage += " Emergency services have been contacted automatically.";
-        } else if (result.message && result.message.includes('Emergency Call')) {
-          voiceMessage += " Emergency call initiated.";
-        } else {
-          voiceMessage += " Emergency contacts have been notified.";
-        }
-        
-        Speech.speak(voiceMessage, {
+        Speech.speak(t('emergency.sentSuccess'), {
           language: getSpeechLanguageCode(i18n.language),
           pitch: 1.0,
           rate: 0.8,
         });
       } else {
         Alert.alert(
-          "❌ SOS Failed",
+          t('common.error'),
           result.message,
           [
-            { text: "OK" },
-            { text: "Try Again", onPress: sendSOS },
-            { text: "Call 911", onPress: () => callEmergencyManually() }
+            { text: t('common.ok') },
+            { text: t('common.next'), onPress: sendSOS },
+            { text: t('sos.callManually'), onPress: () => callEmergencyManually() }
           ]
         );
         
-        // Voice error feedback
-        Speech.speak("SOS failed to send. Please try again or contact emergency services directly.", {
-          language: 'en',
+        Speech.speak(t('emergency.error'), {
+          language: getSpeechLanguageCode(i18n.language),
           pitch: 1.0,
           rate: 0.8,
         });
       }
-      
-      // Refresh history
       await loadSOSHistory();
-      
-    } catch (error) {
-      console.error('SOS Error:', error);
-      Alert.alert(
-        "❌ SOS Error",
-        "An unexpected error occurred. Please contact emergency services directly if this is a real emergency.",
-        [{ text: "OK" }]
-      );
     } finally {
       setIsSending(false);
     }
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString();
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'sms sent':
-        return '#059669'; // Green
-      case 'sms failed':
-      case 'error':
-        return '#DC2626'; // Red
-      case 'permission denied':
-        return '#D97706'; // Orange
-      default:
-        return '#6B7280'; // Gray
-    }
-  };
+  const formatTimestamp = (timestamp: string) => new Date(timestamp).toLocaleString();
 
   const openLocationInMaps = async (latitude: number, longitude: number) => {
     const url = `https://maps.google.com/?q=${latitude},${longitude}`;
-    
     try {
       const canOpen = await Linking.canOpenURL(url);
       if (canOpen) {
         await Linking.openURL(url);
-        Speech.speak(`Opening location ${latitude.toFixed(4)}, ${longitude.toFixed(4)} in maps.`, {
-          language: 'en',
+        Speech.speak(`${t('common.info')}: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, {
+          language: getSpeechLanguageCode(i18n.language),
           pitch: 1.0,
           rate: 0.8,
         });
       } else {
         Alert.alert(
-          "Cannot Open Maps",
-          `Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n\nCopy this link: ${url}`,
-          [{ text: "OK" }]
+          t('common.error'),
+          `Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n\n${url}`,
+          [{ text: t('common.ok') }]
         );
       }
     } catch (error) {
       Alert.alert(
-        "Location",
-        `Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n\nMap URL: ${url}`,
-        [{ text: "OK" }]
+        t('common.info'),
+        `Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n\n${url}`,
+        [{ text: t('common.ok') }]
       );
     }
   };
 
   const showEmergencyMessage = (message: string) => {
     Alert.alert(
-      "📱 Emergency Message Sent",
+      t('sos.lastMessageTitle'),
       message,
       [
-        { text: "OK" },
-        { text: "Copy Message", onPress: () => {
-          // In a real app, you'd use Clipboard API
-          console.log('Message copied:', message);
-        }}
+        { text: t('common.ok') },
       ]
     );
-    
-    // Read the message aloud
-    Speech.speak(`Emergency message sent: ${message}`, {
-      language: 'en',
+    Speech.speak(`${t('sos.lastMessageTitle')}: ${message}`, {
+      language: getSpeechLanguageCode(i18n.language),
       pitch: 1.0,
       rate: 0.7,
     });
   };
 
   const callEmergencyManually = async () => {
-    try {
-      // Use the new callEmergencyNumber method from SOSService
-      const result = await SOSService.callEmergencyNumber();
-      
-      Speech.speak(result.message, {
-        language: 'en',
-        pitch: 1.0,
-        rate: 0.8,
-      });
-      
-      if (!result.success) {
-        Alert.alert(
-          "Call Status",
-          result.message,
-          [{ text: "OK" }]
-        );
-      }
-    } catch (error) {
-      console.error('❌ [SOSScreen] Emergency call failed:', error);
+    const result = await SOSService.callEmergencyNumber();
+    Speech.speak(result.message, {
+      language: getSpeechLanguageCode(i18n.language),
+      pitch: 1.0,
+      rate: 0.8,
+    });
+    if (!result.success) {
       Alert.alert(
-        "Call Failed",
-        "Please dial 911, 112, or 100 manually for emergency services.",
-        [{ text: "OK" }]
+        t('common.info'),
+        result.message,
+        [{ text: t('common.ok') }]
       );
     }
   };
@@ -250,11 +183,7 @@ const SOSScreen = () => {
   return (
     <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar barStyle="light-content" backgroundColor="#DC2626" />
-      
-      {/* Simple Hamburger Menu */}
       <SimpleHamburgerMenu />
-      
-      {/* Header - More spacious and accessible */}
       <LinearGradient
         colors={['#DC2626', '#B91C1C']}
         style={{
@@ -273,7 +202,7 @@ const SOSScreen = () => {
             marginBottom: 8,
             textAlign: 'center'
           }}>
-            Emergency SOS
+            {t('sos.headingTitle')}
           </Text>
           <Text style={{
             fontSize: 18,
@@ -282,7 +211,7 @@ const SOSScreen = () => {
             lineHeight: 24,
             paddingHorizontal: 16
           }}>
-            Send your location to emergency contacts
+            {t('sos.headingSubtitle')}
           </Text>
         </View>
       </LinearGradient>
@@ -292,7 +221,6 @@ const SOSScreen = () => {
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Last Emergency Message Display - More prominent */}
         {lastEmergencyMessage && (
           <View style={{
             backgroundColor: '#EFF6FF',
@@ -310,7 +238,7 @@ const SOSScreen = () => {
                 fontWeight: '600',
                 color: '#1E40AF'
               }}>
-                Last Emergency Message
+                {t('sos.lastMessageTitle')}
               </Text>
             </View>
             <Text style={{
@@ -336,13 +264,12 @@ const SOSScreen = () => {
                 fontWeight: '600',
                 color: '#2563EB'
               }}>
-                View Full Message
+                {t('sos.viewFullMessage')}
               </Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Emergency Button - Larger and more accessible */}
         <View style={{ alignItems: 'center', marginBottom: 48 }}>
           <TouchableOpacity
             onPress={handleSOSPress}
@@ -363,8 +290,8 @@ const SOSScreen = () => {
               marginBottom: 24
             }}
             accessibilityRole="button"
-            accessibilityLabel="Emergency SOS Button"
-            accessibilityHint="Double tap to send emergency location to contacts"
+            accessibilityLabel={t('sos.title')}
+            accessibilityHint={t('sos.subtitle')}
           >
             {isSending ? (
               <View style={{ alignItems: 'center' }}>
@@ -375,7 +302,7 @@ const SOSScreen = () => {
                   fontSize: 18,
                   marginTop: 12
                 }}>
-                  Sending...
+                  {t('sos.sending')}
                 </Text>
               </View>
             ) : (
@@ -394,12 +321,11 @@ const SOSScreen = () => {
                   fontSize: 16,
                   marginTop: 4
                 }}>
-                  Emergency
+                  {t('sos.title')}
                 </Text>
               </View>
             )}
           </TouchableOpacity>
-          
           <Text style={{
             color: '#4B5563',
             textAlign: 'center',
@@ -408,11 +334,10 @@ const SOSScreen = () => {
             paddingHorizontal: 16,
             maxWidth: 400
           }}>
-            Tap the button above to send your current location to emergency contacts via SMS. If no contacts are configured, emergency services will be called automatically.
+            {t('sos.helpText')}
           </Text>
         </View>
 
-        {/* Manual Emergency Call Button - More prominent */}
         <View style={{ alignItems: 'center', marginBottom: 48 }}>
           <TouchableOpacity
             onPress={callEmergencyManually}
@@ -426,7 +351,7 @@ const SOSScreen = () => {
               minWidth: 200
             }}
             accessibilityRole="button"
-            accessibilityLabel="Call emergency services manually"
+            accessibilityLabel={t('sos.callManually')}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="call" size={24} color="#DC2626" />
@@ -436,127 +361,12 @@ const SOSScreen = () => {
                 color: '#B91C1C',
                 fontSize: 18
               }}>
-                Call 911 Manually
+                {t('sos.callManually')}
               </Text>
             </View>
           </TouchableOpacity>
         </View>
 
-        {/* Instructions - More spacious and readable */}
-        <View style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: 20,
-          padding: 32,
-          marginBottom: 32,
-          borderWidth: 1,
-          borderColor: '#F3F4F6',
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-          elevation: 4
-        }}>
-          <Text style={{
-            fontSize: 24,
-            fontWeight: 'bold',
-            color: '#111827',
-            marginBottom: 24,
-            textAlign: 'center'
-          }}>
-            How it works:
-          </Text>
-          
-          <View style={{ gap: 24 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={{
-                width: 40,
-                height: 40,
-                backgroundColor: '#FEE2E2',
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 20,
-                marginTop: 4
-              }}>
-                <Text style={{
-                  color: '#DC2626',
-                  fontSize: 18,
-                  fontWeight: 'bold'
-                }}>
-                  1
-                </Text>
-              </View>
-              <Text style={{
-                flex: 1,
-                color: '#374151',
-                fontSize: 18,
-                lineHeight: 28
-              }}>
-                Gets your current location with GPS
-              </Text>
-            </View>
-            
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={{
-                width: 40,
-                height: 40,
-                backgroundColor: '#FEE2E2',
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 20,
-                marginTop: 4
-              }}>
-                <Text style={{
-                  color: '#DC2626',
-                  fontSize: 18,
-                  fontWeight: 'bold'
-                }}>
-                  2
-                </Text>
-              </View>
-              <Text style={{
-                flex: 1,
-                color: '#374151',
-                fontSize: 18,
-                lineHeight: 28
-              }}>
-                Sends SMS with location link to emergency contacts
-              </Text>
-            </View>
-            
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={{
-                width: 40,
-                height: 40,
-                backgroundColor: '#FEE2E2',
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 20,
-                marginTop: 4
-              }}>
-                <Text style={{
-                  color: '#DC2626',
-                  fontSize: 18,
-                  fontWeight: 'bold'
-                }}>
-                  3
-                </Text>
-              </View>
-              <Text style={{
-                flex: 1,
-                color: '#374151',
-                fontSize: 18,
-                lineHeight: 28
-              }}>
-                Logs the emergency event for your records
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* SOS History - More accessible layout */}
         <View style={{
           backgroundColor: '#FFFFFF',
           borderRadius: 20,
@@ -581,7 +391,7 @@ const SOSScreen = () => {
               fontWeight: 'bold',
               color: '#111827'
             }}>
-              Recent SOS Events
+              {t('sos.recentEvents')}
             </Text>
             <TouchableOpacity 
               onPress={loadSOSHistory} 
@@ -599,7 +409,6 @@ const SOSScreen = () => {
               />
             </TouchableOpacity>
           </View>
-          
           {isLoadingHistory ? (
             <View style={{ alignItems: 'center', paddingVertical: 32 }}>
               <ActivityIndicator size="large" color="#DC2626" />
@@ -608,7 +417,7 @@ const SOSScreen = () => {
                 marginTop: 16,
                 fontSize: 16
               }}>
-                Loading history...
+                {t('sos.loadingHistory')}
               </Text>
             </View>
           ) : sosHistory.length > 0 ? (
@@ -636,7 +445,7 @@ const SOSScreen = () => {
                         width: 16,
                         height: 16,
                         borderRadius: 8,
-                        backgroundColor: getStatusColor(log.status),
+                        backgroundColor: '#10B981',
                         marginRight: 12
                       }} />
                       <Text style={{
@@ -672,12 +481,11 @@ const SOSScreen = () => {
               fontSize: 18,
               lineHeight: 28
             }}>
-              No SOS events recorded yet
+              {t('sos.noEvents')}
             </Text>
           )}
         </View>
 
-        {/* Warning - More prominent and accessible */}
         <View style={{
           backgroundColor: '#FFFBEB',
           borderWidth: 2,
@@ -694,14 +502,14 @@ const SOSScreen = () => {
                 marginBottom: 12,
                 fontSize: 20
               }}>
-                Important Notice
+                {t('sos.importantNotice')}
               </Text>
               <Text style={{
                 fontSize: 16,
                 color: '#92400E',
                 lineHeight: 26
               }}>
-                This SOS feature is designed to assist in emergencies but should not replace calling emergency services (911, 112, etc.) in life-threatening situations.
+                {t('sos.noticeText')}
               </Text>
             </View>
           </View>
