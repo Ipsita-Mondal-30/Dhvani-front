@@ -15,6 +15,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as Speech from "expo-speech";
+import SimpleHamburgerMenu from "@/src/components/SimpleHamburgerMenu";
 
 // ======================
 // CONFIG — replace with your OCR.Space API key
@@ -280,7 +281,8 @@ export default function SpeechScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <SimpleHamburgerMenu/>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -296,25 +298,25 @@ export default function SpeechScreen() {
           accessibilityLabel="उपयोग का तरीका सुनें"
           accessibilityHint="इस बटन को दबाने से आपको उपयोग का तरीका सुनाई देगा"
         >
-          <Text style={styles.helpBtnText}>🔊 सहायता</Text>
+          <Text style={styles.helpBtnText}>🔊 Help</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         accessible
         accessibilityLabel="Main content area"
       >
         {/* Input actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Choose Input</Text>
+          <Text style={styles.sectionTitle}>Choose Input Method</Text>
           <Text style={styles.sectionDesc}>
-            Pick an image or PDF to extract text, or type below.
+            Select an image or PDF to extract text, or type your text below
           </Text>
 
-          <View style={{ gap: 14 }}>
+          <View style={styles.buttonContainer}>
             <AButton
               label="Select Image"
               icon="📷"
@@ -337,14 +339,14 @@ export default function SpeechScreen() {
 
         {/* Manual input */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Type or Paste Text</Text>
-          <Text style={styles.sectionDesc}>What you type here will be spoken aloud.</Text>
-          <View style={styles.inputWrap}>
+          <Text style={styles.sectionTitle}>Type Your Text</Text>
+          <Text style={styles.sectionDesc}>Enter the text you want to be spoken aloud</Text>
+          <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
               multiline
-              placeholder="Type or paste text here…"
-              placeholderTextColor="#64748b"
+              placeholder="Type or paste your text here..."
+              placeholderTextColor="#94a3b8"
               value={text}
               onChangeText={setText}
               onFocus={handleTextFocus}
@@ -358,19 +360,20 @@ export default function SpeechScreen() {
 
         {/* Busy indicator */}
         {busy && (
-          <View style={styles.busyWrap}>
-            <ActivityIndicator size="large" />
-            {!!status && <Text style={styles.busyText}>{status}</Text>}
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            {!!status && <Text style={styles.loadingText}>{status}</Text>}
           </View>
         )}
 
         {/* Playback controls */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Playback</Text>
-          <View style={{ gap: 14 }}>
+          <Text style={styles.sectionTitle}>Playback Controls</Text>
+          
+          {/* Main play button */}
+          <View style={styles.buttonContainer}>
             <AButton
-              label={`Play (${lang === "hi-IN" ? "Hindi" : "English"})`}
-              icon="▶️"
+              label={`▶️ Play in ${lang === "hi-IN" ? "Hindi" : "English"}`}
               variant="success"
               onPress={() => speak(text)}
               hint="Speaks the text aloud"
@@ -378,21 +381,25 @@ export default function SpeechScreen() {
               disabled={busy}
             />
             <AButton
-              label="Stop"
-              icon="⏹️"
+              label="⏹️ Stop"
               variant="danger"
               onPress={stopSpeaking}
               hint="Stops speech"
               onFocusVoice="स्पीच रोक दी जाएगी।"
             />
-            <View style={styles.row}>
+          </View>
+
+          {/* Language selection */}
+          <View style={styles.languageSection}>
+            <Text style={styles.languageTitle}>Language Selection</Text>
+            <View style={styles.languageButtons}>
               <AButton
                 label="🇮🇳 Hindi"
                 onPress={() => {
                   setLang("hi-IN");
                   speakHi("भाषा हिंदी चुनी गई।");
                 }}
-                variant={lang === "hi-IN" ? "success" : "secondary"}
+                variant={lang === "hi-IN" ? "primary" : "secondary"}
                 hint="Set speech language to Hindi"
               />
               <AButton
@@ -401,13 +408,16 @@ export default function SpeechScreen() {
                   setLang("en-US");
                   speakEn("English language selected.");
                 }}
-                variant={lang === "en-US" ? "success" : "secondary"}
+                variant={lang === "en-US" ? "primary" : "secondary"}
                 hint="Set speech language to English"
               />
             </View>
+          </View>
+
+          {/* Clear button */}
+          <View style={styles.buttonContainer}>
             <AButton
-              label="Clear Text"
-              icon="🗑️"
+              label="🗑️ Clear Text"
               variant="secondary"
               onPress={clearAll}
               hint="Clears current text"
@@ -419,10 +429,10 @@ export default function SpeechScreen() {
         {/* Preview of text */}
         {!!text && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current Text</Text>
-            <View style={styles.previewBox}>
+            <Text style={styles.sectionTitle}>Current Text Preview</Text>
+            <View style={styles.previewContainer}>
               <ScrollView
-                style={{ maxHeight: 200, padding: 12 }}
+                style={styles.previewScroll}
                 accessible
                 accessibilityLabel={`Current text: ${text}`}
               >
@@ -437,85 +447,204 @@ export default function SpeechScreen() {
 }
 
 // ======================
-// Styles
+// Styles - Clean White & Blue Theme
 // ======================
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#ffffff" 
+  },
+
+  // Header styles
   header: {
-    backgroundColor: "#1e40af",
-    paddingTop: Platform.OS === "ios" ? 50 : 30,
-    paddingBottom: 18,
-    paddingHorizontal: 20,
+    backgroundColor: "#ffffff",
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
     alignItems: "center",
-    elevation: 4,
-  },
-  title: { fontSize: 30, fontWeight: "700", color: "#fff", marginBottom: 6, paddingTop: 6 },
-  subtitle: { fontSize: 16, color: "#dbeafe" },
-  helpBtn: {
-    marginTop: 12,
-    backgroundColor: "#059669",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  helpBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
-
-  section: { marginBottom: 28 },
-  sectionTitle: { fontSize: 20, fontWeight: "600", color: "#1e293b", marginBottom: 8 },
-  sectionDesc: { fontSize: 15, color: "#64748b", marginBottom: 16 },
-
-  btn: {
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    minHeight: 54,
-    alignItems: "center",
-    justifyContent: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
     elevation: 2,
   },
-  btnPrimary: { backgroundColor: "#1e40af" },
-  btnSecondary: { backgroundColor: "#fff", borderWidth: 2, borderColor: "#1e40af" },
-  btnSuccess: { backgroundColor: "#059669" },
-  btnDanger: { backgroundColor: "#dc2626" },
-  btnDisabled: { backgroundColor: "#e2e8f0", elevation: 0 },
-  btnText: { fontSize: 16, fontWeight: "600" },
-  btnTextPrimary: { color: "#fff" },
-  btnTextSecondary: { color: "#1e40af" },
+  title: { 
+    fontSize: 36, 
+    fontWeight: "700", 
+    color: "#3b82f6", 
+    marginBottom: 8,
+  },
+  subtitle: { 
+    fontSize: 18, 
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  helpBtn: {
+    marginTop: 16,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    shadowColor: "#3b82f6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  helpBtnText: { 
+    color: "#ffffff", 
+    fontSize: 16, 
+    fontWeight: "600" 
+  },
 
-  inputWrap: {
+  // Scroll view styles
+  scrollView: { 
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  scrollContent: { 
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+
+  // Section styles
+  section: { 
+    marginBottom: 40,
+  },
+  sectionTitle: { 
+    fontSize: 24, 
+    fontWeight: "700", 
+    color: "#1e293b", 
+    marginBottom: 12,
+  },
+  sectionDesc: { 
+    fontSize: 16, 
+    color: "#64748b", 
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+
+  // Button styles
+  buttonContainer: {
+    gap: 16,
+  },
+  btn: {
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    minHeight: 60,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  btnPrimary: { 
+    backgroundColor: "#3b82f6" 
+  },
+  btnSecondary: { 
+    backgroundColor: "#ffffff", 
+    borderWidth: 2, 
+    borderColor: "#3b82f6" 
+  },
+  btnSuccess: { 
+    backgroundColor: "#10b981" 
+  },
+  btnDanger: { 
+    backgroundColor: "#ef4444" 
+  },
+  btnDisabled: { 
+    backgroundColor: "#f1f5f9", 
+    shadowOpacity: 0,
+    elevation: 0 
+  },
+  btnText: { 
+    fontSize: 18, 
+    fontWeight: "600" 
+  },
+  btnTextPrimary: { 
+    color: "#ffffff" 
+  },
+  btnTextSecondary: { 
+    color: "#3b82f6" 
+  },
+
+  // Language section
+  languageSection: {
+    marginTop: 24,
+  },
+  languageTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 16,
+  },
+  languageButtons: {
+    flexDirection: "row",
+    gap: 16,
+    justifyContent: "space-between",
+  },
+
+  // Input styles
+  inputContainer: {
     borderWidth: 2,
     borderColor: "#e2e8f0",
-    borderRadius: 12,
-    backgroundColor: "#fff",
+    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
     elevation: 1,
   },
   input: {
-    minHeight: 120,
-    padding: 14,
-    fontSize: 16,
-    color: "#1e293b",
-    lineHeight: 22,
-  },
-
-  busyWrap: {
-    backgroundColor: "#f8fafc",
-    borderColor: "#e2e8f0",
-    borderWidth: 1,
-    borderRadius: 12,
+    minHeight: 140,
     padding: 20,
-    alignItems: "center",
-    marginBottom: 12,
+    fontSize: 18,
+    color: "#1e293b",
+    lineHeight: 26,
   },
-  busyText: { marginTop: 8, color: "#1e40af", fontWeight: "600" },
 
-  previewBox: {
+  // Loading styles
+  loadingContainer: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#e2e8f0",
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  loadingText: { 
+    marginTop: 16, 
+    color: "#3b82f6", 
+    fontSize: 16,
+    fontWeight: "500" 
+  },
+
+  // Preview styles
+  previewContainer: {
     backgroundColor: "#f8fafc",
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    borderRadius: 12,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
-
-  previewText: { fontSize: 16, color: "#334155", lineHeight: 24 },
-
-  row: { flexDirection: "row", gap: 12, justifyContent: "space-between" },
+  previewScroll: { 
+    maxHeight: 200, 
+    padding: 20,
+  },
+  previewText: { 
+    fontSize: 16, 
+    color: "#334155", 
+    lineHeight: 24 
+  },
 });

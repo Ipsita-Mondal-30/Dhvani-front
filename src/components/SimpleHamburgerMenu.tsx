@@ -17,10 +17,11 @@ const SimpleHamburgerMenu: React.FC = () => {
   const menuItems = [
     { title: t('navigation.home'), route: '/index', icon: '🏠' },
     { title: t('navigation.speech'), route: '/speech', icon: '🎤' },
-    { title: t('navigation.settings'), route: '/settings', icon: '⚙️' },
+    { title: t('navigation.braille'), route: '/braille', icon: '🔤➡️⠿' },
     { title: t('navigation.sos'), route: '/sos', icon: '🚨' },
     { title: t('navigation.currency'), route: '/currency', icon: '💰' },
-    { title: t('navigation.profile'), route: '/profile', icon: '👤' },
+    { title: t('navigation.settings'), route: '/settings', icon: '⚙️' },
+ 
   ];
 
   const navigateTo = (route: string) => {
@@ -30,14 +31,15 @@ const SimpleHamburgerMenu: React.FC = () => {
         console.log(`🧭 Navigating to: ${route}`);
         // Use direct tab navigation for all routes
         switch (route) {
-          case '/profile':
-            router.push('/(tabs)/profile');
-            break;
+         
           case '/index':
             router.push('/(tabs)/');
             break;
           case '/speech':
             router.push('/(tabs)/speech');
+            break;
+          case '/braille':
+            router.push('/(tabs)/braille');
             break;
           case '/settings':
             router.push('/(tabs)/settings');
