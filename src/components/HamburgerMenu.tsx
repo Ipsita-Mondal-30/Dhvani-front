@@ -29,7 +29,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({ currentRoute }) => {
     { key: 'speech', title: t('navigation.speech'), icon: '🎤', route: '/speech' },
     { key: 'settings', title: t('navigation.settings'), icon: '⚙️', route: '/settings' },
     { key: 'sos', title: t('navigation.sos'), icon: '🚨', route: '/sos' },
-    { key: 'currency', title: t('navigation.currency'), icon: '💰', route: '/currency' },
+    // { key: 'currency', title: t('navigation.currency'), icon: '💰', route: '/currency' },
     { key: 'profile', title: t('navigation.profile'), icon: '👤', route: '/profile' },
   ];
 

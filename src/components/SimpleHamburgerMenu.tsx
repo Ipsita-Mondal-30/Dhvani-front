@@ -19,7 +19,7 @@ const SimpleHamburgerMenu: React.FC = () => {
     { title: t('navigation.speech'), route: '/speech', icon: '🎤' },
     { title: t('navigation.braille'), route: '/braille', icon: '🔤➡️⠿' },
     { title: t('navigation.sos'), route: '/sos', icon: '🚨' },
-    { title: t('navigation.currency'), route: '/currency', icon: '💰' },
+    // { title: t('navigation.currency'), route: '/currency', icon: '💰' },
     { title: t('navigation.settings'), route: '/settings', icon: '⚙️' },
  
   ];

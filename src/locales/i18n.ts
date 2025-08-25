@@ -66,11 +66,14 @@ export default i18n;
 
 // Helper function to get speech language code based on i18n language
 export const getSpeechLanguageCode = (language: string): string => {
-  // Use the most basic language codes for maximum compatibility
-  if (language === 'hi') {
-    return 'hi'; // Try basic Hindi first
+  // Map i18n language codes to speech language codes
+  switch (language) {
+    case 'hi':
+      return 'hi-IN'; // Hindi (India)
+    case 'en':
+    default:
+      return 'en-US'; // English (US)
   }
-  return 'en'; // Default to English
 };
 
 // Helper function to change language and persist it

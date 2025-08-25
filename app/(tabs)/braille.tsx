@@ -19,6 +19,7 @@ import * as Sharing from 'expo-sharing';
 import * as Speech from 'expo-speech';
 import SimpleHamburgerMenu from '@/src/components/SimpleHamburgerMenu';
 import { useTranslation } from 'react-i18next';
+import { getSpeechLanguageCode } from '@/src/locales/i18n';
 
 const { width } = Dimensions.get('window');
 
@@ -42,9 +43,9 @@ const VOICE_MESSAGES = {
   instructions: 'उपयोग करने का तरीका: पहले फोटो, पीडीएफ चुनें या टेक्स्ट टाइप करें। फिर यह अपने आप ब्रेल में बदल जाएगा। अंत में आप इसे सेव कर सकते हैं।'
 };
 
-const speakHindi = (message: string) => {
+const speakInCurrentLanguage = (message: string, i18n: any) => {
   Speech.speak(message, {
-    language: 'hi-IN',
+    language: getSpeechLanguageCode(i18n.language),
     pitch: 1.0,
     rate: 0.8,
     volume: 1.0,
@@ -156,8 +157,9 @@ function AccessibleButton({
   accessibilityHint,
   icon,
   voiceMessage,
-  onFocus
-}: AccessibleButtonProps) {
+  onFocus,
+  i18n
+}: AccessibleButtonProps & { i18n: any }) {
   const buttonStyle = [
     styles.button,
     variant === 'secondary' ? styles.buttonSecondary : variant === 'success' ? styles.buttonSuccess : styles.buttonPrimary,
@@ -171,7 +173,7 @@ function AccessibleButton({
 
   const handleFocus = () => {
     if (voiceMessage && !disabled) {
-      speakHindi(voiceMessage);
+      speakInCurrentLanguage(voiceMessage, i18n);
     }
     onFocus?.();
   };
@@ -202,7 +204,7 @@ function AccessibleButton({
 }
 
 export default function BrailleScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [extractedText, setExtractedText] = useState('');
   const [braille, setBraille] = useState('');
   const [typedText, setTypedText] = useState('');
@@ -211,9 +213,9 @@ export default function BrailleScreen() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      speakHindi(VOICE_MESSAGES.welcome);
+      speakInCurrentLanguage(VOICE_MESSAGES.welcome, i18n);
       setTimeout(() => {
-        speakHindi(VOICE_MESSAGES.chooseInput);
+        speakInCurrentLanguage(VOICE_MESSAGES.chooseInput, i18n);
       }, 3000);
     }, 1000);
     
@@ -225,7 +227,7 @@ export default function BrailleScreen() {
 
   const pickImage = async () => {
     stopSpeaking();
-    speakHindi(VOICE_MESSAGES.processing);
+    speakInCurrentLanguage(VOICE_MESSAGES.processing, i18n);
     try {
       setBusy(true);
       setCurrentAction(t('common.loading'));
@@ -237,7 +239,7 @@ export default function BrailleScreen() {
       if (res.canceled || !res.assets?.length) {
         setBusy(false);
         setCurrentAction('');
-        speakHindi('फोटो नहीं चुनी गई। कृपया दोबारा कोशिश करें।');
+        speakInCurrentLanguage('फोटो नहीं चुनी गई। कृपया दोबारा कोशिश करें।', i18n);
         return;
       }
       const asset = res.assets[0];
@@ -248,7 +250,7 @@ export default function BrailleScreen() {
       };
       const text = await ocrWithOcrSpaceAsync(file);
       if (!text || text.trim().length === 0) {
-        speakHindi(VOICE_MESSAGES.noContent);
+        speakInCurrentLanguage(VOICE_MESSAGES.noContent, i18n);
         setBusy(false);
         setCurrentAction('');
         return;
@@ -256,16 +258,16 @@ export default function BrailleScreen() {
       setExtractedText(text);
       setBraille(toBrailleGrade1(text));
       setTypedText('');
-      speakHindi(VOICE_MESSAGES.textFound);
+      speakInCurrentLanguage(VOICE_MESSAGES.textFound, i18n);
       setTimeout(() => {
-        speakHindi(VOICE_MESSAGES.brailleReady);
+        speakInCurrentLanguage(VOICE_MESSAGES.brailleReady, i18n);
       }, 2000);
       Alert.alert(
         t('common.success'), 
         t('braille.extractedTextDesc')
       );
     } catch (e: any) {
-      speakHindi(VOICE_MESSAGES.error);
+      speakInCurrentLanguage(VOICE_MESSAGES.error, i18n);
       Alert.alert(t('common.error'), e?.message ?? 'Could not extract text from the selected image.');
     } finally {
       setBusy(false);
@@ -275,7 +277,7 @@ export default function BrailleScreen() {
 
   const pickPdf = async () => {
     stopSpeaking();
-    speakHindi(VOICE_MESSAGES.processing);
+    speakInCurrentLanguage(VOICE_MESSAGES.processing, i18n);
     try {
       setBusy(true);
       setCurrentAction(t('common.loading'));
@@ -287,7 +289,7 @@ export default function BrailleScreen() {
       if (res.canceled || !res.assets?.length) {
         setBusy(false);
         setCurrentAction('');
-        speakHindi('पीडीएफ नहीं चुनी गई। कृपया दोबारा कोशिश करें।');
+        speakInCurrentLanguage('पीडीएफ नहीं चुनी गई। कृपया दोबारा कोशिश करें।', i18n);
         return;
       }
       const asset = res.assets[0];
@@ -298,7 +300,7 @@ export default function BrailleScreen() {
       };
       const text = await ocrWithOcrSpaceAsync(file);
       if (!text || text.trim().length === 0) {
-        speakHindi(VOICE_MESSAGES.noContent);
+        speakInCurrentLanguage(VOICE_MESSAGES.noContent, i18n);
         setBusy(false);
         setCurrentAction('');
         return;
@@ -306,16 +308,16 @@ export default function BrailleScreen() {
       setExtractedText(text);
       setBraille(toBrailleGrade1(text));
       setTypedText('');
-      speakHindi(VOICE_MESSAGES.textFound);
+      speakInCurrentLanguage(VOICE_MESSAGES.textFound, i18n);
       setTimeout(() => {
-        speakHindi(VOICE_MESSAGES.brailleReady);
+        speakInCurrentLanguage(VOICE_MESSAGES.brailleReady, i18n);
       }, 2000);
       Alert.alert(
         t('common.success'), 
         t('braille.extractedTextDesc')
       );
     } catch (e: any) {
-      speakHindi(VOICE_MESSAGES.error);
+      speakInCurrentLanguage(VOICE_MESSAGES.error, i18n);
       Alert.alert(t('common.error'), e?.message ?? 'Could not extract text from the selected PDF.');
     } finally {
       setBusy(false);
@@ -326,15 +328,15 @@ export default function BrailleScreen() {
   const saveFile = async () => {
     stopSpeaking();
     if (!braille) {
-      speakHindi(VOICE_MESSAGES.noContent);
+      speakInCurrentLanguage(VOICE_MESSAGES.noContent, i18n);
       Alert.alert(t('common.info'), t('braille.typeYourTextDesc'));
       return;
     }
     try {
       await saveBrailleFile(braille);
-      speakHindi(VOICE_MESSAGES.fileSaved);
+      speakInCurrentLanguage(VOICE_MESSAGES.fileSaved, i18n);
     } catch (error) {
-      speakHindi(VOICE_MESSAGES.error);
+      speakInCurrentLanguage(VOICE_MESSAGES.error, i18n);
       Alert.alert(t('common.error'), t('common.error'));
     }
   };
@@ -346,12 +348,12 @@ export default function BrailleScreen() {
       setExtractedText('');
     }
     if (text.length === 1 && !extractedText) {
-      speakHindi('अच्छा! आप टाइप कर रहे हैं। यह तुरंत ब्रेल में बदल रहा है।');
+      speakInCurrentLanguage('अच्छा! आप टाइप कर रहे हैं। यह तुरंत ब्रेल में बदल रहा है।', i18n);
     }
   };
 
   const handleTextInputFocus = () => {
-    speakHindi(VOICE_MESSAGES.typeText);
+    speakInCurrentLanguage(VOICE_MESSAGES.typeText, i18n);
   };
 
   const clearAll = () => {
@@ -371,7 +373,7 @@ export default function BrailleScreen() {
             setExtractedText('');
             setBraille('');
             setTypedText('');
-            speakHindi('सब कुछ साफ कर दिया गया। अब आप नया टेक्स्ट जोड़ सकते हैं।');
+            speakInCurrentLanguage('सब कुछ साफ कर दिया गया। अब आप नया टेक्स्ट जोड़ सकते हैं।', i18n);
           }
         }
       ]
@@ -380,7 +382,7 @@ export default function BrailleScreen() {
 
   const speakInstructions = () => {
     stopSpeaking();
-    speakHindi(VOICE_MESSAGES.instructions);
+    speakInCurrentLanguage(VOICE_MESSAGES.instructions, i18n);
   };
 
   return (
@@ -421,6 +423,7 @@ export default function BrailleScreen() {
               icon="📷"
               voiceMessage={VOICE_MESSAGES.selectImage}
               accessibilityHint={t('braille.selectImage')}
+              i18n={i18n}
             />
             <AccessibleButton
               label={t('braille.selectPdf')}
@@ -430,6 +433,7 @@ export default function BrailleScreen() {
               icon="📄"
               voiceMessage={VOICE_MESSAGES.selectPdf}
               accessibilityHint={t('braille.selectPdf')}
+              i18n={i18n}
             />
           </View>
         </View>
@@ -512,6 +516,7 @@ export default function BrailleScreen() {
                 icon="💾"
                 voiceMessage={VOICE_MESSAGES.saveFile}
                 accessibilityHint={t('braille.saveFile')}
+                i18n={i18n}
               />
               <AccessibleButton
                 label={t('braille.clearAll')}
@@ -520,6 +525,7 @@ export default function BrailleScreen() {
                 icon="🗑️"
                 voiceMessage={VOICE_MESSAGES.clearAll}
                 accessibilityHint={t('braille.clearAll')}
+                i18n={i18n}
               />
             </View>
           </View>
