@@ -50,8 +50,9 @@ export default ({ config }) => ({
         origin: false
       },
       eas: {
-        projectId: "f60f2d31-e43a-440d-be1a-a7f81f938679"
+        projectId: "fe57b036-8bc0-47e0-a4be-4a5cf8316885"
       }
     },
-    owner: "ipsitamondal"
+    owner: "ipsitaa_30"
+
   });

@@ -18,9 +18,11 @@ import { useTranslation } from 'react-i18next';
 import * as Linking from 'expo-linking';
 
 import { icons } from "../../constants/icons";
-import { getSpeechLanguageCode, changeLanguage } from "../../../dhvani-expo-app/src/locales/i18n";
-import SimpleHamburgerMenu from "../../../dhvani-expo-app/src/components/SimpleHamburgerMenu";
-import { useTheme } from "../../../dhvani-expo-app/src/contexts/ThemeContext";
+import { getSpeechLanguageCode, changeLanguage } from "../../src/locales/i18n";
+
+
+import SimpleHamburgerMenu from "../../src/components/SimpleHamburgerMenu";
+import { useTheme } from "../../src/contexts/ThemeContext";
 
 import { SOSService } from "../../services/sosService";
 
