@@ -40,7 +40,8 @@ const VOICE_MESSAGES = {
   fileSaved: 'आपकी ब्रेल फाइल सफलतापूर्वक सेव हो गई है।',
   error: 'कुछ समस्या हुई है। कृपया दोबारा कोशिश करें।',
   noContent: 'कोई टेक्स्ट नहीं मिला। कृपया दूसरी फाइल चुनें या टेक्स्ट टाइप करें।',
-  instructions: 'उपयोग करने का तरीका: पहले फोटो, पीडीएफ चुनें या टेक्स्ट टाइप करें। फिर यह अपने आप ब्रेल में बदल जाएगा। अंत में आप इसे सेव कर सकते हैं।'
+  instructions: 'उपयोग करने का तरीका: पहले फोटो, पीडीएफ चुनें या टेक्स्ट टाइप करें। फिर यह अपने आप ब्रेल में बदल जाएगा। अंत में आप इसे सेव कर सकते हैं।',
+  readingText: 'अब मैं आपके लिए टेक्स्ट पढ़ रहा हूँ।'
 };
 
 const speakInCurrentLanguage = (message: string, i18n: any) => {
@@ -210,6 +211,7 @@ export default function BrailleScreen() {
   const [typedText, setTypedText] = useState('');
   const [busy, setBusy] = useState(false);
   const [currentAction, setCurrentAction] = useState('');
+  const [isReading, setIsReading] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -385,6 +387,30 @@ export default function BrailleScreen() {
     speakInCurrentLanguage(VOICE_MESSAGES.instructions, i18n);
   };
 
+  const speakExtractedText = () => {
+    stopSpeaking();
+    if (extractedText) {
+      setIsReading(true);
+      speakInCurrentLanguage(VOICE_MESSAGES.readingText, i18n);
+      setTimeout(() => {
+        Speech.speak(extractedText, {
+          language: 'en-US',
+          pitch: 1.0,
+          rate: 0.7,
+          volume: 1.0,
+          onDone: () => setIsReading(false),
+          onStopped: () => setIsReading(false),
+          onError: () => setIsReading(false),
+        });
+      }, 2000);
+    }
+  };
+
+  const stopReading = () => {
+    Speech.stop();
+    setIsReading(false);
+  };
+
   return (
     <View style={styles.container}>
       <SimpleHamburgerMenu/>
@@ -470,18 +496,52 @@ export default function BrailleScreen() {
 
         {!!extractedText && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('braille.extractedText')}</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{t('braille.extractedText')}</Text>
+              <View style={styles.speechButtonContainer}>
+                {!isReading ? (
+                  <TouchableOpacity 
+                    style={styles.speakButton}
+                    onPress={speakExtractedText}
+                    accessible={true}
+                    accessibilityLabel="Read extracted text aloud"
+                    accessibilityHint="Tap to hear the extracted text read aloud"
+                  >
+                    <Text style={styles.speakButtonText}>🔊 Read</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity 
+                    style={styles.stopButton}
+                    onPress={stopReading}
+                    accessible={true}
+                    accessibilityLabel="Stop reading text"
+                    accessibilityHint="Tap to stop reading the text aloud"
+                  >
+                    <Text style={styles.stopButtonText}>⏹️ Stop</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
             <Text style={styles.sectionDescription}>
               {t('braille.extractedTextDesc')}
             </Text>
             <View style={styles.textDisplayContainer}>
               <ScrollView 
                 style={styles.textScrollView}
+                contentContainerStyle={styles.scrollContent}
                 accessible={true}
                 accessibilityLabel={`Extracted text content: ${extractedText}`}
-                accessibilityHint={t('braille.extractedTextDesc')}
+                accessibilityHint="Scroll to read the full extracted text"
+                showsVerticalScrollIndicator={true}
+                persistentScrollbar={true}
+                scrollEventThrottle={16}
+                bounces={true}
+                overScrollMode="always"
+                nestedScrollEnabled={true}
               >
-                <Text style={styles.extractedText}>{extractedText}</Text>
+                <Text style={styles.extractedText} selectable={true}>
+                  {extractedText}
+                </Text>
               </ScrollView>
             </View>
           </View>
@@ -496,11 +556,20 @@ export default function BrailleScreen() {
             <View style={styles.brailleContainer}>
               <ScrollView 
                 style={styles.brailleScrollView}
+                contentContainerStyle={styles.scrollContent}
                 accessible={true}
                 accessibilityLabel="Braille text output"
-                accessibilityHint={t('braille.brailleOutputDesc')}
+                accessibilityHint="Scroll to read the full braille text"
+                showsVerticalScrollIndicator={true}
+                persistentScrollbar={true}
+                scrollEventThrottle={16}
+                bounces={true}
+                overScrollMode="always"
+                nestedScrollEnabled={true}
               >
-                <Text style={styles.brailleText}>{braille}</Text>
+                <Text style={styles.brailleText} selectable={true}>
+                  {braille}
+                </Text>
               </ScrollView>
             </View>
           </View>
@@ -651,17 +720,66 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 40,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#1e293b',
-    marginBottom: 12,
+    flex: 1,
+    marginRight: 12,
   },
   sectionDescription: {
     fontSize: 16,
     color: '#64748b',
     marginBottom: 24,
     lineHeight: 24,
+  },
+  speechButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  speakButton: {
+    backgroundColor: '#10b981',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    minWidth: 80,
+  },
+  speakButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  stopButton: {
+    backgroundColor: '#ef4444',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    minWidth: 80,
+  },
+  stopButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   buttonContainer: {
     gap: 16,
@@ -760,10 +878,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 1,
+    height: 200,
+    overflow: 'hidden',
   },
   textScrollView: {
-    maxHeight: 160,
-    padding: 20,
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  scrollContent: {
+    paddingVertical: 4,
+    paddingBottom: 20,
   },
   extractedText: {
     fontSize: 16,
@@ -780,10 +905,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
+    height: 250,
+    overflow: 'hidden',
   },
   brailleScrollView: {
-    maxHeight: 200,
-    padding: 20,
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   brailleText: {
     fontSize: 32,

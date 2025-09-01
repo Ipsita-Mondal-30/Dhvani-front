@@ -1,4 +1,3 @@
-// Speech.tsx
 import React, { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -11,6 +10,7 @@ import {
   TextInput,
   StyleSheet,
   StatusBar,
+  Dimensions,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
@@ -19,50 +19,40 @@ import SimpleHamburgerMenu from "@/src/components/SimpleHamburgerMenu";
 import { useTranslation } from 'react-i18next';
 import { getSpeechLanguageCode } from '@/src/locales/i18n';
 
-// ======================
-// CONFIG — replace with your OCR.Space API key
-// ======================
-const OCR_SPACE_API_KEY = "K86479850788957"; // <-- put your real key here
-const OCR_ENDPOINT = "https://api.ocr.space/parse/image";
+const { width } = Dimensions.get('window');
 
-// ======================
-// Voice Messages (Hindi & English guidance)
+const OCR_SPACE_API_KEY = "K86479850788957";
+const OCR_ENDPOINT = "https://api.ocr.space/parse/image";
 
 const VOICE_MESSAGES_HI = {
   welcome: "नमस्ते। आपका ध्वनि ऐप में स्वागत है। यह स्क्रीन आपके टेक्स्ट को सुनाकर बताएगी।",
-  chooseInput:
-    "आप टेक्स्ट जोड़ने के लिए फोटो चुन सकते हैं, पीडीएफ चुन सकते हैं, या सीधे टाइप कर सकते हैं।",
+  chooseInput: "आप टेक्स्ट जोड़ने के लिए फोटो चुन सकते हैं, पीडीएफ चुन सकते हैं, या सीधे टाइप कर सकते हैं।",
   selectImage: "फोटो चुनने के लिए यहाँ दबाएं।",
   selectPdf: "पीडीएफ फाइल चुनने के लिए यहाँ दबाएं।",
   typeText: "यहाँ अपना टेक्स्ट लिखें।",
   processing: "कृपया रुकें। हम आपकी फाइल से टेक्स्ट निकाल रहे हैं।",
   textFound: "टेक्स्ट मिल गया है। अब मैं इसे पढ़कर सुनाऊँगी।",
   noContent: "कोई टेक्स्ट नहीं मिला।",
-  instructions:
-    "उपयोग का तरीका: फोटो या पीडीएफ चुनें, या टेक्स्ट टाइप करें। फिर सुनाने के लिए प्ले दबाएं। भाषा बदलने के लिए हिंदी या English बटन दबाएं।",
+  instructions: "उपयोग का तरीका: फोटो या पीडीएफ चुनें, या टेक्स्ट टाइप करें। फिर सुनाने के लिए प्ले दबाएं। भाषा बदलने के लिए हिंदी या English बटन दबाएं।",
 };
 
 const VOICE_MESSAGES_EN = {
   welcome: "Hello. Welcome to Dhvani. This screen reads your text aloud.",
-  chooseInput:
-    "You can add text by selecting a photo, picking a PDF, or typing directly.",
+  chooseInput: "You can add text by selecting a photo, picking a PDF, or typing directly.",
   selectImage: "Press here to select an image.",
   selectPdf: "Press here to select a PDF file.",
   typeText: "Type your text here.",
   processing: "Please wait. Extracting text from your file.",
   textFound: "Text found. I will read it now.",
   noContent: "No text found.",
-  instructions:
-    "How to use: Select a photo or PDF, or type your text. Then press Play to hear it. Use the language buttons to change voice.",
+  instructions: "How to use: Select a photo or PDF, or type your text. Then press Play to hear it. Use the language buttons to change voice.",
 };
 
-// ======================
-// Small speech helpers
-// ======================
 const speakHi = (message: string) => {
   Speech.stop();
   Speech.speak(message, { language: "hi-IN", pitch: 1.0, rate: 0.95 });
 };
+
 const speakEn = (message: string) => {
   Speech.stop();
   Speech.speak(message, { language: "en-US", pitch: 1.0, rate: 1.0 });
@@ -70,10 +60,6 @@ const speakEn = (message: string) => {
 
 const stopSpeaking = () => Speech.stop();
 
-// ======================
-// OCR helper (OCR.Space)
-// Works for images and PDFs (server does the heavy lifting)
-// ======================
 async function ocrWithOcrSpaceAsync(file: {
   uri: string;
   name?: string;
@@ -87,12 +73,10 @@ async function ocrWithOcrSpaceAsync(file: {
   form.append("scale", "true");
   form.append("OCREngine", "2");
   form.append("file", {
-    // @ts-ignore React Native file shim
+    // @ts-ignore
     uri: file.uri,
     name: file.name ?? (file.type?.includes("pdf") ? "document.pdf" : "image.jpg"),
-    type:
-      file.type ??
-      (file.uri.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
+    type: file.type ?? (file.uri.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
   } as any);
 
   const res = await fetch(OCR_ENDPOINT, { method: "POST", body: form as any });
@@ -102,108 +86,125 @@ async function ocrWithOcrSpaceAsync(file: {
   return json.ParsedResults.map((r: any) => r.ParsedText ?? "").join("\n").trim();
 }
 
-// ======================
-// Accessible Button
-// ======================
- type BtnVariant = "primary" | "secondary" | "danger" | "success";
-function AButton({
-  label,
-  onPress,
-  variant = "primary",
-  disabled,
-  hint,
-  icon,
-  onFocusVoice,
-}: {
+interface AccessibleButtonProps {
   label: string;
   onPress: () => void;
-  variant?: BtnVariant;
   disabled?: boolean;
-  hint?: string;
+  variant?: 'primary' | 'secondary' | 'success' | 'danger';
+  accessibilityHint?: string;
   icon?: string;
-  onFocusVoice?: string;
-}) {
-  const style = [
-    styles.btn,
-    variant === "secondary"
-      ? styles.btnSecondary
-      : variant === "danger"
-      ? styles.btnDanger
-      : variant === "success"
-      ? styles.btnSuccess
-      : styles.btnPrimary,
-    disabled && styles.btnDisabled,
+  voiceMessage?: string;
+  onFocus?: () => void;
+}
+
+function AccessibleButton({ 
+  label, 
+  onPress, 
+  disabled = false, 
+  variant = 'primary',
+  accessibilityHint,
+  icon,
+  voiceMessage,
+  onFocus,
+  i18n
+}: AccessibleButtonProps & { i18n: any }) {
+  const buttonStyle = [
+    styles.button,
+    variant === 'secondary' ? styles.buttonSecondary : 
+    variant === 'success' ? styles.buttonSuccess :
+    variant === 'danger' ? styles.buttonDanger : 
+    styles.buttonPrimary,
+    disabled && styles.buttonDisabled
   ];
+
   const textStyle = [
-    styles.btnText,
-    variant === "secondary" ? styles.btnTextSecondary : styles.btnTextPrimary,
+    styles.buttonText,
+    variant === 'secondary' ? styles.buttonTextSecondary : styles.buttonTextPrimary
   ];
+
+  const handleFocus = () => {
+    if (voiceMessage && !disabled) {
+      const languageCode = getSpeechLanguageCode(i18n.language);
+      Speech.speak(voiceMessage, { language: languageCode, pitch: 1.0, rate: 0.95 });
+    }
+    onFocus?.();
+  };
+
+  const handlePress = () => {
+    stopSpeaking();
+    onPress();
+  };
+
   return (
     <TouchableOpacity
-      style={style}
-      onPress={() => {
-        stopSpeaking();
-        onPress();
-      }}
-      onFocus={() => {
-        if (onFocusVoice && !disabled) speakHi(onFocusVoice);
-      }}
+      style={buttonStyle}
+      onPress={handlePress}
+      onFocus={handleFocus}
       disabled={disabled}
-      accessible
+      accessible={true}
       accessibilityRole="button"
-      accessibilityLabel={`${icon ? icon + " " : ""}${label}`}
-      accessibilityHint={hint}
+      accessibilityLabel={`${icon ? icon + ' ' : ''}${label}`}
+      accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled }}
     >
       <Text style={textStyle}>
-        {icon ? `${icon} ` : ""}
+        {icon && <Text style={styles.buttonIcon}>{icon} </Text>}
         {label}
       </Text>
     </TouchableOpacity>
   );
 }
 
-// ======================
-// Main TTS Screen
-// ======================
 export default function SpeechScreen() {
   const { t, i18n } = useTranslation();
   const [text, setText] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [lang, setLang] = useState<"hi-IN" | "en-US">(i18n.language === 'hi' ? "hi-IN" : "en-US");
   const [status, setStatus] = useState<string>("");
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const M = i18n.language === 'hi' ? VOICE_MESSAGES_HI : VOICE_MESSAGES_EN;
 
-  // speak helper based on current language
   const speakInCurrentLanguage = (message: string) => {
     Speech.stop();
     const languageCode = getSpeechLanguageCode(i18n.language);
     Speech.speak(message, { language: languageCode, pitch: 1.0, rate: 0.95 });
   };
 
-  // announce on mount
   useEffect(() => {
-    const tmr = setTimeout(() => {
+    const timer = setTimeout(() => {
       speakInCurrentLanguage(M.welcome);
       setTimeout(() => speakInCurrentLanguage(M.chooseInput), 2600);
-    }, 600);
+    }, 1000);
+    
     return () => {
-      clearTimeout(tmr);
+      clearTimeout(timer);
       stopSpeaking();
     };
   }, [i18n.language]);
 
-  // speak helper based on chosen language
   const speak = (content: string) => {
     if (!content?.trim()) {
       speakInCurrentLanguage(M.noContent);
       Alert.alert(t('speechPage.noText'), t('speechPage.addTextFirst'));
       return;
     }
+    setIsPlaying(true);
     Speech.stop();
-    const languageCode = getSpeechLanguageCode(i18n.language);
-    Speech.speak(content, { language: languageCode, pitch: 1.0, rate: 0.95 });
+    const languageCode = lang;
+    Speech.speak(content, { 
+      language: languageCode, 
+      pitch: 1.0, 
+      rate: 0.95,
+      onDone: () => setIsPlaying(false),
+      onStopped: () => setIsPlaying(false),
+      onError: () => setIsPlaying(false),
+    });
+  };
+
+  const stopSpeech = () => {
+    Speech.stop();
+    setIsPlaying(false);
   };
 
   const pickImage = async () => {
@@ -228,7 +229,6 @@ export default function SpeechScreen() {
         name: asset.fileName ?? "image.jpg",
         type: asset.mimeType ?? "image/jpeg",
       };
-      setStatus(t('common.loading'));
       const extracted = await ocrWithOcrSpaceAsync(file);
       if (!extracted) {
         speakInCurrentLanguage(M.noContent);
@@ -245,10 +245,7 @@ export default function SpeechScreen() {
       setBusy(false);
       setStatus("");
       speakInCurrentLanguage(i18n.language === 'hi' ? "त्रुटि हुई।" : "An error occurred.");
-      Alert.alert(
-        "Image OCR Error",
-        e?.message ?? "Could not extract text from the selected image."
-      );
+      Alert.alert("Image OCR Error", e?.message ?? "Could not extract text from the selected image.");
     }
   };
 
@@ -271,7 +268,6 @@ export default function SpeechScreen() {
       }
       const asset = res.assets[0];
       const file = { uri: asset.uri, name: asset.name ?? "document.pdf", type: "application/pdf" };
-      setStatus(t('common.loading'));
       const extracted = await ocrWithOcrSpaceAsync(file);
       if (!extracted) {
         speakInCurrentLanguage(M.noContent);
@@ -288,10 +284,7 @@ export default function SpeechScreen() {
       setBusy(false);
       setStatus("");
       speakInCurrentLanguage(i18n.language === 'hi' ? "त्रुटि हुई।" : "An error occurred.");
-      Alert.alert(
-        "PDF OCR Error",
-        e?.message ?? "Could not extract text from the selected PDF."
-      );
+      Alert.alert("PDF OCR Error", e?.message ?? "Could not extract text from the selected PDF.");
     }
   };
 
@@ -305,6 +298,11 @@ export default function SpeechScreen() {
     speakInCurrentLanguage(t('speechPage.cleared'));
   };
 
+  const speakInstructions = () => {
+    stopSpeaking();
+    speakInCurrentLanguage(M.instructions);
+  };
+
   const languageName = lang === "hi-IN" ? t('language.hindi') : t('language.english');
 
   return (
@@ -312,135 +310,164 @@ export default function SpeechScreen() {
       <SimpleHamburgerMenu/>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Dhvani</Text>
-        <Text style={styles.subtitle}>{t('speechPage.subtitle')}</Text>
-        <TouchableOpacity
-          style={styles.helpBtn}
-          onPress={() => {
-            stopSpeaking();
-            speakInCurrentLanguage(M.instructions);
-          }}
-          accessible
-          accessibilityLabel={i18n.language === 'hi' ? "उपयोग का तरीका सुनें" : "Hear usage instructions"}
-          accessibilityHint={i18n.language === 'hi' ? "इस बटन को दबाने से आपको उपयोग का तरीका सुनाई देगा" : "Press to hear how to use this screen"}
+        <Text style={styles.appTitle}>Dhvani</Text>
+        <Text style={styles.appSubtitle}>{t('speechPage.subtitle')}</Text>
+        <Text style={styles.appDescription}>{t('speechPage.description')}</Text>
+        <TouchableOpacity 
+          style={styles.voiceButton}
+          onPress={speakInstructions}
+          accessible={true}
+          accessibilityLabel={t('speechPage.help')}
         >
-          <Text style={styles.helpBtnText}>🔊 {t('speechPage.help')}</Text>
+          <Text style={styles.voiceButtonText}>Help</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        accessible={true}
+        accessibilityLabel="Main content area"
       >
-        {/* Input Method Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('speechPage.chooseInput')}</Text>
-          <Text style={styles.sectionDesc}>{t('speechPage.chooseInputDesc')}</Text>
-          
-          <View style={styles.buttonRow}>
-            <AButton
+          <Text style={styles.sectionDescription}>{t('speechPage.chooseInputDesc')}</Text>
+          <View style={styles.buttonContainer}>
+            <AccessibleButton
               label={t('speechPage.selectImage')}
               onPress={pickImage}
+              disabled={busy}
               icon="📷"
-              hint={t('speechPage.selectImage')}
-              onFocusVoice={M.selectImage}
+              voiceMessage={M.selectImage}
+              accessibilityHint={t('speechPage.selectImage')}
+              i18n={i18n}
             />
-            <AButton
+            <AccessibleButton
               label={t('speechPage.selectPdf')}
               onPress={pickPdf}
+              disabled={busy}
+              variant="secondary"
               icon="📄"
-              hint={t('speechPage.selectPdf')}
-              onFocusVoice={M.selectPdf}
+              voiceMessage={M.selectPdf}
+              accessibilityHint={t('speechPage.selectPdf')}
+              i18n={i18n}
             />
           </View>
         </View>
 
-        {/* Text Input */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('speechPage.typeYourText')}</Text>
-          <Text style={styles.sectionDesc}>{t('speechPage.typeYourTextDesc')}</Text>
-          
-          <TextInput
-            style={styles.textInput}
-            value={text}
-            onChangeText={setText}
-            placeholder={t('speechPage.placeholder')}
-            placeholderTextColor="#64748b"
-            multiline
-            textAlignVertical="top"
-            onFocus={handleTextFocus}
-            accessible
-            accessibilityLabel={t('speechPage.typeYourText')}
-            accessibilityHint={t('speechPage.typeYourTextDesc')}
-          />
+          <Text style={styles.sectionDescription}>{t('speechPage.typeYourTextDesc')}</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.textInput}
+              value={text}
+              onChangeText={setText}
+              placeholder={t('speechPage.placeholder')}
+              placeholderTextColor="#94a3b8"
+              multiline
+              textAlignVertical="top"
+              onFocus={handleTextFocus}
+              accessible={true}
+              accessibilityLabel={t('speechPage.typeYourText')}
+              accessibilityHint={t('speechPage.typeYourTextDesc')}
+            />
+          </View>
         </View>
 
-        {/* Playback Controls */}
+        {busy && (
+          <View style={styles.processingContainer}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.processingText}>{status}</Text>
+            <Text style={styles.processingSubtext}>{t('common.loading')}</Text>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('speechPage.playbackControls')}</Text>
+          <Text style={styles.sectionDescription}>Control speech playback and choose your preferred language</Text>
           
-          <View style={styles.buttonRow}>
-            <AButton
-              label={t('speechPage.playIn', { language: languageName })}
-              onPress={() => speak(text)}
-              variant="success"
-              icon="▶️"
-              disabled={!text.trim() || busy}
-              hint={t('speechPage.pressPlayHint')}
-            />
-            <AButton
-              label={t('speechPage.stop')}
-              onPress={stopSpeaking}
-              variant="secondary"
-              icon="⏹️"
-              hint={t('speechPage.speechWillStop')}
-            />
-          </View>
-          
-          <View style={styles.buttonRow}>
-            <AButton
+          <View style={styles.buttonContainer}>
+            {!isPlaying ? (
+              <AccessibleButton
+                label={t('speechPage.playIn', { language: languageName })}
+                onPress={() => speak(text)}
+                variant="success"
+                icon="▶️"
+                disabled={!text.trim() || busy}
+                accessibilityHint={t('speechPage.pressPlayHint')}
+                i18n={i18n}
+              />
+            ) : (
+              <AccessibleButton
+                label={t('speechPage.stop')}
+                onPress={stopSpeech}
+                variant="danger"
+                icon="⏹️"
+                accessibilityHint={t('speechPage.speechWillStop')}
+                i18n={i18n}
+              />
+            )}
+            <AccessibleButton
               label={t('speechPage.clearText')}
               onPress={clearAll}
-              variant="danger"
+              variant="secondary"
               icon="🗑️"
               disabled={!text.trim()}
-              hint={t('speechPage.cleared')}
+              accessibilityHint={t('speechPage.cleared')}
+              i18n={i18n}
             />
           </View>
         </View>
 
-        {/* Language Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('speechPage.languageSelection')}</Text>
+          <Text style={styles.sectionDescription}>Choose the voice language for speech playback</Text>
           
-          <View style={styles.buttonRow}>
-            <AButton
+          <View style={styles.buttonContainer}>
+            <AccessibleButton
               label={t('language.hindi')}
               onPress={() => setLang("hi-IN")}
               variant={lang === "hi-IN" ? "success" : "secondary"}
               icon="🇮🇳"
-              hint={t('language.hindi')}
+              accessibilityHint={t('language.hindi')}
+              i18n={i18n}
             />
-            <AButton
+            <AccessibleButton
               label={t('language.english')}
               onPress={() => setLang("en-US")}
               variant={lang === "en-US" ? "success" : "secondary"}
               icon="🇺🇸"
-              hint={t('language.english')}
+              accessibilityHint={t('language.english')}
+              i18n={i18n}
             />
           </View>
         </View>
 
-        {/* Current Text Preview */}
         {text.trim() && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('speechPage.currentTextPreview')}</Text>
-            <Text style={styles.previewText}>
-              {text.length > 200 ? `${text.substring(0, 200)}...` : text}
-            </Text>
+            <View style={styles.textDisplayContainer}>
+              <ScrollView 
+                style={styles.textScrollView}
+                contentContainerStyle={styles.scrollContent}
+                accessible={true}
+                accessibilityLabel={`Current text content: ${text}`}
+                accessibilityHint="Scroll to read the full text"
+                showsVerticalScrollIndicator={true}
+                persistentScrollbar={true}
+                scrollEventThrottle={16}
+                bounces={true}
+                overScrollMode="always"
+                nestedScrollEnabled={true}
+              >
+                <Text style={styles.previewText} selectable={true}>
+                  {text}
+                </Text>
+              </ScrollView>
+            </View>
             <Text style={styles.charCount}>
               {text.length} {t('speech.characters')}
               {text.length > 5000 && (
@@ -450,198 +477,327 @@ export default function SpeechScreen() {
           </View>
         )}
 
-        {/* Status */}
-        {status && (
-          <View style={styles.statusContainer}>
-            <ActivityIndicator size="large" color="#1e40af" />
-            <Text style={styles.statusText}>{status}</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('speechPage.howToUse')}</Text>
+          <TouchableOpacity 
+            style={styles.instructionsButton}
+            onPress={speakInstructions}
+            accessible={true}
+            accessibilityLabel={t('speechPage.help')}
+          >
+            <Text style={styles.instructionsButtonText}>{t('speechPage.help')}</Text>
+          </TouchableOpacity>
+        
+          <View style={styles.instructionContainer}>
+            <View style={styles.instructionStep}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>1</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>{t('speechPage.chooseInput')}</Text>
+                <Text style={styles.stepDescription}>
+                  Select an image, PDF file, or type your text directly into the input field
+                </Text>
+              </View>
+            </View>
+            <View style={styles.instructionStep}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>2</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Choose Language</Text>
+                <Text style={styles.stepDescription}>
+                  Select Hindi or English for the voice that will read your text aloud
+                </Text>
+              </View>
+            </View>
+            <View style={styles.instructionStep}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>3</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Listen</Text>
+                <Text style={styles.stepDescription}>
+                  Press the Play button to hear your text read aloud, or Stop to pause playback
+                </Text>
+              </View>
+            </View>
           </View>
-        )}
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-// ======================
-// Accessible White & Blue Theme Styles
-// ======================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
   },
   header: {
-    paddingTop: Platform.OS === "ios" ? 70 : 50,
-    paddingHorizontal: 28,
-    paddingBottom: 32,
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 2,
-    borderBottomColor: "#e2e8f0",
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: "800",
-    color: "#1e40af",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 20,
-    color: "#475569",
-    marginBottom: 24,
-    textAlign: "center",
-    lineHeight: 28,
-  },
-  helpBtn: {
-    alignSelf: "center",
-    backgroundColor: "#dbeafe",
+    backgroundColor: '#ffffff',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 24,
     paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#3b82f6",
-    minHeight: 56,
-    justifyContent: "center",
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  helpBtnText: {
+  appTitle: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#3b82f6',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  appSubtitle: {
     fontSize: 18,
-    color: "#1e40af",
-    fontWeight: "600",
-    textAlign: "center",
+    color: '#64748b',
+    marginBottom: 6,
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  scrollView: {
+  appDescription: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  voiceButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    alignItems: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  voiceButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  content: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: '#ffffff',
   },
-  scrollContent: {
-    padding: 28,
-    paddingBottom: 40,
+  contentContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 32,
   },
   section: {
     marginBottom: 40,
-    backgroundColor: "#ffffff",
-    padding: 24,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   sectionTitle: {
     fontSize: 24,
-    fontWeight: "700",
-    color: "#1e40af",
+    fontWeight: '700',
+    color: '#1e293b',
     marginBottom: 12,
-    textAlign: "center",
   },
-  sectionDesc: {
-    fontSize: 18,
-    color: "#64748b",
+  sectionDescription: {
+    fontSize: 16,
+    color: '#64748b',
     marginBottom: 24,
-    lineHeight: 26,
-    textAlign: "center",
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 16,
-  },
-  btn: {
-    flex: 1,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 64,
-    borderWidth: 2,
-  },
-  btnPrimary: {
-    backgroundColor: "#3b82f6",
-    borderColor: "#1e40af",
-  },
-  btnSecondary: {
-    backgroundColor: "#f1f5f9",
-    borderColor: "#cbd5e1",
-  },
-  btnSuccess: {
-    backgroundColor: "#10b981",
-    borderColor: "#059669",
-  },
-  btnDanger: {
-    backgroundColor: "#ef4444",
-    borderColor: "#dc2626",
-  },
-  btnDisabled: {
-    opacity: 0.4,
-  },
-  btnText: {
-    fontSize: 18,
-    fontWeight: "700",
-    textAlign: "center",
     lineHeight: 24,
   },
-  btnTextPrimary: {
-    color: "#ffffff",
+  buttonContainer: {
+    gap: 16,
   },
-  btnTextSecondary: {
-    color: "#475569",
+  button: {
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    minHeight: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  buttonPrimary: {
+    backgroundColor: '#3b82f6',
+  },
+  buttonSecondary: {
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+  },
+  buttonSuccess: {
+    backgroundColor: '#10b981',
+  },
+  buttonDanger: {
+    backgroundColor: '#ef4444',
+  },
+  buttonDisabled: {
+    backgroundColor: '#f1f5f9',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  buttonTextPrimary: {
+    color: '#ffffff',
+  },
+  buttonTextSecondary: {
+    color: '#3b82f6',
+  },
+  buttonIcon: {
+    fontSize: 20,
+  },
+  inputContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   textInput: {
-    borderWidth: 3,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
+    minHeight: 140,
     padding: 20,
-    fontSize: 20,
-    color: "#1e293b",
-    minHeight: 160,
-    backgroundColor: "#ffffff",
-    textAlignVertical: "top",
-    lineHeight: 28,
+    fontSize: 18,
+    color: '#1e293b',
+    lineHeight: 26,
+    textAlignVertical: 'top',
+  },
+  processingContainer: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#e2e8f0',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  processingText: {
+    fontSize: 16,
+    color: '#3b82f6',
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  processingSubtext: {
+    fontSize: 14,
+    color: '#64748b',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  textDisplayContainer: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+    height: 200,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  textScrollView: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  scrollContent: {
+    paddingVertical: 4,
+    paddingBottom: 20,
   },
   previewText: {
-    fontSize: 18,
-    color: "#475569",
-    lineHeight: 26,
-    backgroundColor: "#f8fafc",
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    marginBottom: 12,
+    fontSize: 16,
+    color: '#334155',
+    lineHeight: 24,
   },
   charCount: {
-    fontSize: 16,
-    color: "#64748b",
-    textAlign: "right",
-    marginTop: 8,
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'right',
   },
   warning: {
-    color: "#dc2626",
-    fontWeight: "600",
+    color: '#ef4444',
+    fontWeight: '600',
   },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-    backgroundColor: "#dbeafe",
+  instructionsButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  instructionsButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  instructionContainer: {
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
-    marginTop: 20,
-    borderWidth: 2,
-    borderColor: "#93c5fd",
-    minHeight: 80,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 24,
   },
-  statusText: {
-    marginLeft: 16,
+  instructionStep: {
+    flexDirection: 'row',
+    marginBottom: 24,
+    alignItems: 'flex-start',
+  },
+  stepNumber: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#3b82f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 20,
+    marginTop: 2,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  stepNumberText: {
     fontSize: 18,
-    color: "#1e40af",
-    fontWeight: "600",
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  stepContent: {
+    flex: 1,
+  },
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  stepDescription: {
+    fontSize: 16,
+    color: '#64748b',
+    lineHeight: 24,
   },
 });
